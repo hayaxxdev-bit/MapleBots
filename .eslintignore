@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+build/
+out/
+
+# Environment
+.env
+.env.*
+
+# Generated
+*.min.js
+coverage/
+
+# Scripts
+scripts/
+
+# Data
+data/
+sessions/
+temp/
+.cache/
+logs/

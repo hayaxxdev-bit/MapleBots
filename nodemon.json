@@ -1,6 +1,6 @@
 {
-  "watch": ["src"],
-  "ext": "ts,json",
+  "watch": ["src", ".env"],
+  "ext": "ts,json,env",
   "ignore": [
     "src/**/*.spec.ts",
     "node_modules",
@@ -8,13 +8,19 @@
     "sessions",
     "temp",
     "logs",
-    "tests"
+    "tests",
+    ".cache",
+    "data"
   ],
   "exec": "ts-node -r tsconfig-paths/register src/index.ts",
   "env": {
-    "NODE_ENV": "development"
+    "NODE_ENV": "development",
+    "TS_NODE_TRANSPILE_ONLY": "true"
   },
   "delay": 1000,
   "verbose": false,
-  "restartable": "rs"
+  "restartable": "rs",
+  "events": {
+    "restart": "clear || cls"
+  }
 }

@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  maple-bot:
+    build: .
+    container_name: maple-bots
+    restart: unless-stopped
+    volumes:
+      - ./sessions:/app/sessions
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./temp:/app/temp
+      - ./.env:/app/.env
+    environment:
+      - NODE_ENV=production
+    networks:
+      - bot-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  redis:
+    image: redis:7-alpine
+    container_name: maple-bot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - bot-network
+
+volumes:
+  redis-data:
+
+networks:
+  bot-network:
+    driver: bridge
