@@ -1,8 +1,8 @@
 // src/handlers/commandHandler.ts
-import type { WASocket, proto } from '@whiskeysockets/baileys';
+import type { WASocket, proto, WAMessage } from '@whiskeysockets/baileys'; // MediaType dihapus dari sini untuk mencegah duplikat
 import { config } from '../config/config';
 import { logger, logHelper } from '../utils/logger';
-import type { Command, CommandContext, MediaType } from '../types';
+import type { AudioOptions, Command, CommandContext, MediaOptions, MediaType, StickerOptions } from '../types';
 
 // Import commands
 import { tiktokCommand, tiktokAudioCommand } from '../commands/downloader/tiktok';
@@ -14,12 +14,15 @@ import { traceAnimeCommand } from '../commands/anime/traceAnime';
 import { animeInfoCommand, mangaInfoCommand } from '../commands/anime/animeInfo';
 import { wallpaperCommand } from '../commands/anime/wallpaper';
 import { helpCommand } from '../commands/general/help';
+import { menuCommand } from '../commands/general/menu';
+import { pingCommand } from '../commands/general/ping';
 
 /**
  * Registry pusat seluruh command.
  * Menambah fitur baru = tambah satu entry di sini + buat file handler-nya.
  */
 export const commands: readonly Command[] = Object.freeze([
+  // Downloader commands
   tiktokCommand,
   tiktokAudioCommand,
   youtubeCommand,
@@ -27,11 +30,17 @@ export const commands: readonly Command[] = Object.freeze([
   instagramCommand,
   facebookCommand,
   generalDownloadCommand,
+  
+  // Anime commands
   traceAnimeCommand,
   animeInfoCommand,
   mangaInfoCommand,
   wallpaperCommand,
+  
+  // General commands
   helpCommand,
+  menuCommand,
+  pingCommand,
 ]);
 
 /**
@@ -68,6 +77,13 @@ export function getAllCommands(): readonly Command[] {
 }
 
 /**
+ * Get commands by category.
+ */
+export function getCommandsByCategory(category: Command['category']): readonly Command[] {
+  return commands.filter(cmd => cmd.category === category);
+}
+
+/**
  * Get command by name or alias.
  */
 export function getCommand(name: string): Command | undefined {
@@ -77,7 +93,7 @@ export function getCommand(name: string): Command | undefined {
 /**
  * Ekstrak teks dari berbagai tipe pesan Baileys.
  */
-function extractText(msg: proto.IWebMessageInfo): string {
+function extractText(msg: WAMessage): string {
   const m = msg.message;
   if (!m) return '';
   
@@ -101,11 +117,15 @@ interface ParsedCommand {
 }
 
 function parseCommand(text: string): ParsedCommand | null {
-  if (!text.startsWith(config.prefix)) {
+  // Check all prefixes
+  const prefixes = [config.prefix, ...config.prefixAlt];
+  const matchedPrefix = prefixes.find(p => text.startsWith(p));
+  
+  if (!matchedPrefix) {
     return null;
   }
   
-  const withoutPrefix = text.slice(config.prefix.length).trim();
+  const withoutPrefix = text.slice(matchedPrefix.length).trim();
   const [rawCommand, ...args] = withoutPrefix.split(/\s+/);
   
   if (!rawCommand) {
@@ -122,8 +142,8 @@ function parseCommand(text: string): ParsedCommand | null {
 /**
  * Validasi chat sebelum diproses.
  */
-function isValidChat(msg: proto.IWebMessageInfo): boolean {
-  if (!msg.message || msg.key.fromMe) {
+function isValidChat(msg: WAMessage): boolean {
+  if (!msg.message || !msg.key || msg.key.fromMe) {
     return false;
   }
   
@@ -136,11 +156,24 @@ function isValidChat(msg: proto.IWebMessageInfo): boolean {
 }
 
 /**
- * Create reply helper.
+ * Check if sender is owner or admin.
+ */
+function isOwnerOrAdmin(sender: string): boolean {
+  const senderNumber = sender.replace(/[^0-9]/g, '');
+  const ownerNumbers = [
+    config.ownerNumber,
+    ...config.adminNumbers,
+  ].map(num => num.replace(/[^0-9]/g, ''));
+  
+  return ownerNumbers.includes(senderNumber);
+}
+
+/**
+ * Create reply helper with enhanced options.
  */
 function createReplyHelper(
   sock: WASocket,
-  msg: proto.IWebMessageInfo,
+  msg: WAMessage,
   chatId: string,
 ): (text: string) => Promise<void> {
   return async (replyText: string): Promise<void> => {
@@ -158,56 +191,31 @@ function createReplyHelper(
 }
 
 /**
- * Create reply media helper.
+ * Create reply media helper with enhanced options.
  */
 function createReplyMediaHelper(
   sock: WASocket,
-  msg: proto.IWebMessageInfo,
+  msg: WAMessage,
   chatId: string,
 ): (buffer: Buffer, type: MediaType, caption?: string) => Promise<void> {
   return async (buffer: Buffer, type: MediaType, caption?: string): Promise<void> => {
     try {
       switch (type) {
         case 'video':
-          await sock.sendMessage(
-            chatId,
-            { video: buffer, caption },
-            { quoted: msg },
-          );
+          await sock.sendMessage(chatId, { video: buffer, caption, mimetype: 'video/mp4' }, { quoted: msg });
           break;
-          
         case 'audio':
-          await sock.sendMessage(
-            chatId,
-            { 
-              audio: buffer, 
-              mimetype: 'audio/mpeg',
-              ptt: false,
-            },
-            { quoted: msg },
-          );
+          await sock.sendMessage(chatId, { audio: buffer, mimetype: 'audio/mpeg', ptt: false }, { quoted: msg });
           break;
-          
         case 'image':
-          await sock.sendMessage(
-            chatId,
-            { image: buffer, caption },
-            { quoted: msg },
-          );
+          await sock.sendMessage(chatId, { image: buffer, caption, mimetype: 'image/jpeg' }, { quoted: msg });
           break;
-          
         case 'document':
-          await sock.sendMessage(
-            chatId,
-            {
-              document: buffer,
-              mimetype: 'application/octet-stream',
-              fileName: caption ?? 'file',
-            },
-            { quoted: msg },
-          );
+          await sock.sendMessage(chatId, { document: buffer, mimetype: 'application/octet-stream', fileName: caption ?? 'file' }, { quoted: msg });
           break;
-          
+        case 'sticker':
+          await sock.sendMessage(chatId, { sticker: buffer }, { quoted: msg });
+          break;
         default:
           throw new Error(`Unsupported media type: ${type}`);
       }
@@ -223,21 +231,58 @@ function createReplyMediaHelper(
  */
 function createCommandContext(
   sock: WASocket,
-  msg: proto.IWebMessageInfo,
+  msg: WAMessage,
   chatId: string,
   sender: string,
   args: string[],
   fullText: string,
 ): CommandContext {
+  const isGroup = chatId.endsWith('@g.us');
+  const senderIsOwner = isOwnerOrAdmin(sender);
+  
+  // Perbaikan: Ratusan baris objek palsu dihapus dan dikembalikan ke fungsi sesungguhnya
   return {
-    sock,
+    sock, // Socket diteruskan langsung, tidak perlu di-mock
     msg,
     chatId,
     sender,
     args,
     fullText,
+    isGroup,
+    isOwner: senderIsOwner,
+    isAdmin: senderIsOwner,
+    
+    // Helpers
     reply: createReplyHelper(sock, msg, chatId),
     replyMedia: createReplyMediaHelper(sock, msg, chatId),
+    
+    // Explicit Media Helpers untuk mengatasi TypeScript Error TS2739
+    replySticker: async (buffer: Buffer, options?: StickerOptions) => {
+      await sock.sendMessage(chatId, { sticker: buffer, ...options }, { quoted: msg });
+    },
+    replyImage: async (buffer: Buffer, caption?: string) => {
+      await sock.sendMessage(chatId, { image: buffer, caption, mimetype: 'image/jpeg' }, { quoted: msg });
+    },
+    replyVideo: async (buffer: Buffer, caption?: string) => {
+      await sock.sendMessage(chatId, { video: buffer, caption, mimetype: 'video/mp4' }, { quoted: msg });
+    },
+    replyAudio: async (buffer: Buffer, options?: AudioOptions) => {
+      await sock.sendMessage(chatId, { audio: buffer, mimetype: 'audio/mpeg', ptt: options?.ptt || false }, { quoted: msg });
+    },
+    replyDocument: async (buffer: Buffer, filename: string, caption?: string) => {
+      await sock.sendMessage(chatId, { document: buffer, fileName: filename, caption, mimetype: 'application/octet-stream' }, { quoted: msg });
+    },
+
+    // Presence actions
+    sendTyping: async () => {
+      await sock.sendPresenceUpdate('composing', chatId);
+    },
+    sendRecording: async () => {
+      await sock.sendPresenceUpdate('recording', chatId);
+    },
+    sendRead: async () => {
+      await sock.readMessages([msg.key]);
+    },
   };
 }
 
@@ -249,7 +294,29 @@ async function executeCommand(
   ctx: CommandContext,
 ): Promise<void> {
   try {
+    if (command.isOwnerOnly && !ctx.isOwner) {
+      await ctx.reply('⚠️ Command ini khusus owner!');
+      return;
+    }
+    
+    if (command.isAdminOnly && !ctx.isAdmin) {
+      await ctx.reply('⚠️ Command ini khusus admin!');
+      return;
+    }
+    
+    if (command.isGroupOnly && !ctx.isGroup) {
+      await ctx.reply('⚠️ Command ini hanya bisa digunakan di grup!');
+      return;
+    }
+    
+    if (command.isPrivateOnly && ctx.isGroup) {
+      await ctx.reply('⚠️ Command ini hanya bisa digunakan di chat pribadi!');
+      return;
+    }
+    
+    // Execute command
     await command.handler(ctx);
+    
   } catch (error) {
     logHelper.error(`command:${command.name}`, error);
     await ctx.reply(
@@ -264,7 +331,7 @@ async function executeCommand(
  */
 export async function handleIncomingMessage(
   sock: WASocket,
-  msg: proto.IWebMessageInfo,
+  msg: WAMessage,
 ): Promise<void> {
   // Validate message
   if (!isValidChat(msg)) {

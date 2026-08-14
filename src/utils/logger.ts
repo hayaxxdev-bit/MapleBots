@@ -4,20 +4,14 @@ import fs from 'fs';
 import path from 'path';
 import { config } from '../config/config';
 
-/**
- * Interface untuk transport configuration.
- */
 interface TransportConfig {
   readonly target: string;
   readonly level: string;
   readonly options?: Record<string, unknown>;
 }
 
-/**
- * Setup direktori log dan validasi permissions.
- */
 function setupLogDirectory(): string {
-  const logDir = path.join(process.cwd(), 'logs');
+  const logDir = path.dirname(path.resolve(config.logFileCombined));
   
   try {
     if (!fs.existsSync(logDir)) {
@@ -25,7 +19,6 @@ function setupLogDirectory(): string {
       console.info(`📁 Created log directory: ${logDir}`);
     }
     
-    // Test write permission
     const testFile = path.join(logDir, '.write-test');
     fs.writeFileSync(testFile, 'test', { flag: 'w' });
     fs.unlinkSync(testFile);
@@ -37,32 +30,28 @@ function setupLogDirectory(): string {
   }
 }
 
-/**
- * Build transport configurations based on environment.
- */
 function buildTransports(logDir: string): TransportConfig[] {
   const transports: TransportConfig[] = [
-    // Console output with pretty formatting
     {
       target: 'pino-pretty',
       level: config.logLevel,
       options: {
-        colorize: !config.isProduction,
+        colorize: config.logPretty && !config.isProduction,
         translateTime: 'SYS:HH:MM:ss',
         ignore: 'pid,hostname',
         singleLine: config.isProduction,
+        messageFormat: '{module} {msg}',
       },
     },
   ];
 
-  // File transports only in production
   if (config.isProduction) {
     transports.push(
       {
         target: 'pino/file',
         level: 'info',
         options: {
-          destination: path.join(logDir, 'combined.log'),
+          destination: config.logFileCombined,
           mkdir: true,
         },
       },
@@ -70,7 +59,7 @@ function buildTransports(logDir: string): TransportConfig[] {
         target: 'pino/file',
         level: 'error',
         options: {
-          destination: path.join(logDir, 'error.log'),
+          destination: config.logFileError,
           mkdir: true,
         },
       },
@@ -80,12 +69,8 @@ function buildTransports(logDir: string): TransportConfig[] {
   return transports;
 }
 
-// Setup log directory
 const logDir = setupLogDirectory();
 
-/**
- * Build logger options.
- */
 const loggerOptions: LoggerOptions = {
   level: config.logLevel,
   timestamp: pino.stdTimeFunctions.isoTime,
@@ -94,34 +79,36 @@ const loggerOptions: LoggerOptions = {
     env: config.isProduction ? 'production' : 'development',
   },
   redact: {
-    paths: ['password', 'token', 'secret', 'authorization'],
+    paths: [
+      'password', 
+      'token', 
+      'secret', 
+      'authorization',
+      '*.password',
+      '*.token',
+      '*.secret',
+      '*.apiKey',
+      '*.sessionPassword',
+    ],
     censor: '[REDACTED]',
   },
 };
 
-/**
- * Create main logger instance.
- */
 export const logger: Logger = pino(loggerOptions, pino.transport({
   targets: buildTransports(logDir),
 }));
 
-/**
- * Logger khusus untuk Baileys dengan level yang lebih tinggi.
- */
 export const baileysLogger: Logger = logger.child({ 
   module: 'baileys',
 });
 
-// Set Baileys logger level
 baileysLogger.level = config.baileysLogLevel;
 
-/**
- * Type definitions untuk log helper methods.
- */
-type DownloadService = 'tiktok' | 'youtube' | 'instagram' | 'facebook' | 'general';
-type DownloadStatus = 'START' | 'SUCCESS' | 'FAILED';
-type AnimeFeature = 'info' | 'trace' | 'wallpaper';
+// Type definitions
+type DownloadService = 'tiktok' | 'youtube' | 'instagram' | 'facebook' | 'twitter' | 'general';
+type DownloadStatus = 'START' | 'SUCCESS' | 'FAILED' | 'RETRY';
+type AnimeFeature = 'info' | 'trace' | 'wallpaper' | 'search' | 'download';
+type ScraperType = 'anime' | 'manga' | 'downloader' | 'api';
 
 interface CommandLogContext {
   readonly sender: string;
@@ -129,14 +116,14 @@ interface CommandLogContext {
   readonly args: readonly string[];
 }
 
-/**
- * Helper utilities untuk mencatat log aktivitas Bot secara konsisten.
- */
+interface ScraperLogContext {
+  readonly scraper: string;
+  readonly operation: string;
+  readonly status: 'success' | 'failed' | 'timeout';
+  readonly duration?: number;
+}
+
 export const logHelper = {
-  /**
-   * Log saat user menjalankan command.
-   * @param context - Command context information
-   */
   command(context: CommandLogContext): void {
     const { sender, command, args } = context;
     const argString = args.length > 0 ? ` ${args.join(' ')}` : '';
@@ -146,13 +133,6 @@ export const logHelper = {
     );
   },
 
-  /**
-   * Log aktivitas downloader.
-   * @param service - Nama service downloader
-   * @param url - URL yang diproses
-   * @param status - Status operasi
-   * @param extraInfo - Informasi tambahan (opsional)
-   */
   downloader(
     service: DownloadService,
     url: string,
@@ -166,11 +146,6 @@ export const logHelper = {
     );
   },
 
-  /**
-   * Log aktivitas fitur anime.
-   * @param feature - Nama fitur anime
-   * @param query - Query atau informasi yang diproses
-   */
   anime(feature: AnimeFeature, query: string): void {
     logger.info(
       { feature, query },
@@ -178,11 +153,15 @@ export const logHelper = {
     );
   },
 
-  /**
-   * Log penanganan error dengan konteks yang jelas.
-   * @param context - Konteks error (misal: 'download', 'api-call')
-   * @param error - Error object atau unknown error
-   */
+  scraper(context: ScraperLogContext): void {
+    const { scraper, operation, status, duration } = context;
+    const durationStr = duration ? ` | ${duration}ms` : '';
+    logger.info(
+      { scraper, operation, status, duration },
+      `[SCRAPER:${scraper}] [${operation}] ${status}${durationStr}`,
+    );
+  },
+
   error(context: string, error: unknown): void {
     if (error instanceof Error) {
       logger.error(
@@ -191,6 +170,7 @@ export const logHelper = {
             message: error.message,
             stack: error.stack,
             name: error.name,
+            cause: error.cause,
           },
           context,
         },
@@ -204,18 +184,40 @@ export const logHelper = {
     }
   },
 
-  /**
-   * Log warning dengan konteks.
-   * @param context - Konteks warning
-   * @param message - Warning message
-   */
   warn(context: string, message: string): void {
     logger.warn(
       { context },
       `[WARN:${context}] ${message}`,
     );
   },
+
+  debug(context: string, message: string, data?: unknown): void {
+    logger.debug(
+      { context, data },
+      `[DEBUG:${context}] ${message}`,
+    );
+  },
+
+  fatal(context: string, error: unknown): void {
+    if (error instanceof Error) {
+      logger.fatal(
+        { 
+          err: {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+          },
+          context,
+        },
+        `[FATAL:${context}] ${error.message}`,
+      );
+    } else {
+      logger.fatal(
+        { err: String(error), context },
+        `[FATAL:${context}] ${String(error)}`,
+      );
+    }
+  },
 };
 
-// Export types for use in other modules
-export type { Logger, TransportConfig, CommandLogContext };
+export type { Logger, TransportConfig, CommandLogContext, ScraperLogContext, DownloadService, DownloadStatus };

@@ -1,5 +1,6 @@
 // src/index.ts
-// CRITICAL: DNS Configuration untuk mengatasi masalah IPv6
+import fs from 'node:fs';
+import path from 'node:path';
 import dns from 'node:dns';
 dns.setDefaultResultOrder('ipv4first');
 dns.setServers([
@@ -12,6 +13,10 @@ dns.setServers([
 import { startBot } from './connection/connection';
 import { logger, logHelper } from './utils/logger';
 import { config } from './config/config';
+import { CacheManager } from './utils/cache';
+import { DatabaseManager } from './utils/database';
+import { ScraperManager } from './scrapers/scraper-manager';
+import { sessionEmitter } from './utils/session-event';
 
 type ShutdownSignal = 'SIGINT' | 'SIGTERM' | 'SIGQUIT';
 
@@ -19,30 +24,65 @@ interface BotInstance {
   readonly stop: () => Promise<void>;
 }
 
+interface AppServices {
+  readonly cache: CacheManager;
+  readonly database: DatabaseManager;
+  readonly scraperManager: ScraperManager;
+}
+
 async function testDnsResolution(): Promise<void> {
   try {
     logger.info('🔍 Testing DNS resolution...');
     
-    const results = await Promise.allSettled([
-      dns.promises.resolve4('api.jikan.moe'),
-      dns.promises.resolve6('api.jikan.moe'),
-    ]);
+    const domains = [
+      'web.whatsapp.com',
+      'api.jikan.moe',
+      'api.waifu.im',
+      'nekos.best',
+      ...config.scraperUrls,
+    ];
     
-    const [ipv4Result, ipv6Result] = results;
+    const results = await Promise.allSettled(
+      domains.map(domain => dns.promises.resolve4(domain))
+    );
     
-    if (ipv4Result.status === 'fulfilled') {
-      logger.info(`   ✅ IPv4 addresses: ${ipv4Result.value.join(', ')}`);
-    } else {
-      logger.warn('   ⚠️ No IPv4 addresses found for api.jikan.moe');
-    }
-    
-    if (ipv6Result.status === 'fulfilled') {
-      logger.info(`   ✅ IPv6 addresses: ${ipv6Result.value.join(', ')}`);
-    } else {
-      logger.info('   ℹ️ No IPv6 addresses found (normal if IPv6 is disabled)');
-    }
+    domains.forEach((domain, index) => {
+      const result = results[index];
+      if (result?.status === 'fulfilled') {
+        logger.debug(`   ✅ ${domain}: ${result.value.join(', ')}`);
+      } else {
+        logger.warn(`   ⚠️ ${domain}: DNS resolution failed`);
+      }
+    });
   } catch (error) {
     logHelper.error('dns-test', error);
+  }
+}
+
+async function initializeServices(): Promise<AppServices> {
+  logger.info('🔧 Initializing services...');
+  
+  // Initialize cache
+  const cache = CacheManager.getInstance();
+  logger.info('   ✅ Cache manager initialized');
+  
+  // Initialize database
+  const database = DatabaseManager.getInstance();
+  await database.initialize();
+  logger.info('   ✅ Database initialized');
+  
+  // Initialize scraper manager
+  const scraperManager = ScraperManager.getInstance();
+  await scraperManager.initialize();
+  logger.info('   ✅ Scraper manager initialized');
+  
+  return { cache, database, scraperManager };
+}
+
+async function checkScraperHealth(scraperManager: ScraperManager): Promise<void> {
+  if (config.scraperHealthCheck) {
+    logger.info('🏥 Checking scraper health...');
+    await scraperManager.healthCheck();
   }
 }
 
@@ -52,23 +92,111 @@ async function bootstrap(): Promise<void> {
   logger.info(`Bot Name: ${config.botName}`);
   logger.info(`Prefix: ${config.prefix}`);
   logger.info(`DNS: IPv4-first (forced)`);
+  logger.info(`Time Zone: ${config.timezone}`);
   
   await testDnsResolution();
   
+  // Initialize services
+  const services = await initializeServices();
+  
+  // Check scraper health
+  await checkScraperHealth(services.scraperManager);
+  
+  // Start bot
   const bot = await startBot();
-  setupGracefulShutdown(bot);
+  
+  // Setup graceful shutdown
+  setupGracefulShutdown(bot, services);
   
   logger.info('✅ Bot is ready and running!');
+  
+  // Start background tasks
+  startBackgroundTasks(services);
 }
 
-function setupGracefulShutdown(bot: BotInstance): void {
+function startBackgroundTasks(services: AppServices): void {
+  // Auto cleanup temp files
+  if (config.tempCleanupInterval > 0) {
+    setInterval(() => {
+      cleanupTempFiles();
+    }, config.tempCleanupInterval * 60 * 1000);
+  }
+  
+  // Scraper health check interval
+  if (config.scraperHealthCheck && config.scraperCheckInterval > 0) {
+    setInterval(async () => {
+      await services.scraperManager.healthCheck();
+    }, config.scraperCheckInterval);
+  }
+  
+  // Session auto-save
+ if (config.sessionSaveInterval > 0) {
+  setInterval(() => {
+    // ✅ Menggunakan custom event emitter (type-safe & bersih)
+    sessionEmitter.emit('save-session');
+  }, config.sessionSaveInterval);
+}
+}
+
+function cleanupTempFiles(): void {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const tempDir = path.resolve(config.tempDir);
+    
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+      return;
+    }
+    
+    const files = fs.readdirSync(tempDir);
+    const now = Date.now();
+    let cleanedCount = 0;
+    
+    files.forEach((file: string) => {
+      const filePath = path.join(tempDir, file);
+      const stats = fs.statSync(filePath);
+      const age = (now - stats.mtimeMs) / (60 * 1000); // age in minutes
+      
+      if (age > config.tempCleanupInterval) {
+        try {
+          fs.unlinkSync(filePath);
+          cleanedCount++;
+        } catch (error) {
+          logHelper.warn('cleanup', `Failed to delete ${file}`);
+        }
+      }
+    });
+    
+    if (cleanedCount > 0) {
+      logger.info(`🧹 Cleaned ${cleanedCount} temp files`);
+    }
+  } catch (error) {
+    logHelper.error('cleanup', error);
+  }
+}
+
+function setupGracefulShutdown(bot: BotInstance, services: AppServices): void {
   const shutdown = async (signal: ShutdownSignal): Promise<void> => {
     logger.info(`Received ${signal}. Shutting down gracefully...`);
     
     try {
+      // Close bot connection
       await bot.stop();
-      logger.info('Bot connection closed.');
+      logger.info('✅ Bot connection closed.');
+      
+      // Close database
+      await services.database.close();
+      logger.info('✅ Database closed.');
+      
+      // Clear cache
+      await services.cache.clear();
+      logger.info('✅ Cache cleared.');
+      
+      // Flush logs
       await logger.flush();
+      
+      logger.info('👋 Shutdown complete. Goodbye!');
       process.exit(0);
     } catch (error) {
       logHelper.error('shutdown', error);
@@ -89,6 +217,12 @@ function setupGlobalErrorHandlers(): void {
   process.on('uncaughtException', (error: Error) => {
     logHelper.error('uncaughtException', error);
     logger.fatal('Uncaught exception detected. Process will exit.');
+    
+    // Notify owner if enabled
+    if (config.notifyOnCrash) {
+      // Send notification (implement based on your notification system)
+    }
+    
     setTimeout(() => process.exit(1), 1000);
   });
 

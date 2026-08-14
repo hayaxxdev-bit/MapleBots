@@ -18,6 +18,8 @@ out/
 .env.production.local
 .env.*.local
 
+.husky
+
 # Logs
 logs/
 *.log
