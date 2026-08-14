@@ -1,0 +1,74 @@
+{
+  "name": "maple-bots",
+  "version": "2.0.0",
+  "description": "Advanced WhatsApp Bot with TypeScript, featuring all-in-one downloader & anime services using @whiskeysockets/baileys",
+  "main": "dist/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "nodemon",
+    "dev:ts": "ts-node -r tsconfig-paths/register src/index.ts",
+    "clean": "rimraf dist logs/*.log temp/*",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "prepare": "husky install",
+    "prebuild": "pnpm clean && pnpm type-check",
+    "postbuild": "node scripts/post-build.js",
+    "check": "pnpm lint && pnpm type-check"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "axios": "^1.7.9",
+    "cheerio": "^1.2.0",
+    "dotenv": "^16.4.7",
+    "ffmpeg-static": "^5.2.0",
+    "file-type": "^16.5.4",
+    "fluent-ffmpeg": "^2.1.3",
+    "form-data": "^4.0.1",
+    "pino": "^9.5.0",
+    "pino-pretty": "^13.0.0",
+    "qrcode-terminal": "^0.12.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cheerio": "^0.22.35",
+    "@types/fluent-ffmpeg": "^2.1.24",
+    "@types/node": "^22.10.2",
+    "@types/qrcode-terminal": "^0.12.2",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "husky": "^9.0.0",
+    "nodemon": "^3.1.9",
+    "prettier": "^3.2.0",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "tsc-alias": "^1.9.1",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "baileys",
+    "typescript",
+    "downloader",
+    "anime"
+  ],
+  "author": "hayaxxdev-bit",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/maple-bots.git"
+  }
+}
