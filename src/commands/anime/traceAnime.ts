@@ -1,4 +1,4 @@
-import type { proto } from '@whiskeysockets/baileys';
+import type { proto, WAMessage } from '@whiskeysockets/baileys';
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { http } from '../../utils/httpClient';
 import { config } from '../../config/config';
@@ -11,7 +11,7 @@ function getQuotedMessage(msg: proto.IWebMessageInfo): proto.IWebMessageInfo | n
 
   return {
     key: {
-      remoteJid: msg.key.remoteJid,
+      remoteJid: msg.key?.remoteJid!,
       id: ctx.stanzaId,
       participant: ctx.participant,
     },
@@ -57,7 +57,7 @@ export const traceAnimeCommand: Command = {
 
     try {
       // Unduh gambar dari pesan WhatsApp (baik gambar langsung maupun hasil reply)
-      const buffer = await downloadMediaMessage(targetMsg, 'buffer', {});
+      const buffer = await downloadMediaMessage(targetMsg as WAMessage, 'buffer', {});
       const result = await traceAnime(buffer as Buffer);
 
       if (!result) {

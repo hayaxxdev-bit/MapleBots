@@ -24,6 +24,7 @@
     "db:migrate": "ts-node -r tsconfig-paths/register scripts/migrate-db.ts"
   },
   "dependencies": {
+    "@distube/ytdl-core": "latest",
     "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "7.0.0-rc14",
     "axios": "^1.7.9",

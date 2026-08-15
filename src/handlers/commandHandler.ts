@@ -6,7 +6,7 @@ import type { AudioOptions, Command, CommandContext, MediaOptions, MediaType, St
 
 // Import commands
 import { tiktokCommand, tiktokAudioCommand } from '../commands/downloader/tiktok';
-import { youtubeCommand, youtubeAudioCommand } from '../commands/downloader/youtube';
+import { youtubeCommand, youtubeAudioCommand, youtubeInfoCommand, youtubeShortsCommand } from '../commands/downloader/youtube';
 import { instagramCommand } from '../commands/downloader/instagram';
 import { facebookCommand } from '../commands/downloader/facebook';
 import { generalDownloadCommand } from '../commands/downloader/general';
@@ -17,31 +17,77 @@ import { helpCommand } from '../commands/general/help';
 import { menuCommand } from '../commands/general/menu';
 import { pingCommand } from '../commands/general/ping';
 
+// Downloader commands
+
+// Anime commands
+// import { waifuCommand } from '../commands/anime/waifu';
+import { nekosCommand } from '../commands/anime/nekos';
+
+// Utility commands
+import { stickerCommand } from '../commands/utility/sticker';
+// import { translateCommand } from '../commands/utility/translate';
+// import { calcCommand } from '../commands/utility/calc';
+// import { screenshotCommand } from '../commands/utility/screenshot';
+
+// Admin commands
+import { banCommand, unbanCommand } from '../commands/admin/ban';
+// import { muteCommand, unmuteCommand } from '../commands/admin/mute';
+// import { kickCommand } from '../commands/admin/kick';
+
+// General commands
+import { statsCommand } from '../commands/general/stats';
+// import { uptimeCommand } from '../commands/general/uptime';
+
 /**
- * Registry pusat seluruh command.
- * Menambah fitur baru = tambah satu entry di sini + buat file handler-nya.
+ * All registered commands.
  */
 export const commands: readonly Command[] = Object.freeze([
-  // Downloader commands
+  // Downloader
   tiktokCommand,
   tiktokAudioCommand,
   youtubeCommand,
   youtubeAudioCommand,
+  youtubeInfoCommand,
+  youtubeShortsCommand,
   instagramCommand,
   facebookCommand,
+  // twitterCommand,
   generalDownloadCommand,
   
-  // Anime commands
-  traceAnimeCommand,
+  // Anime
   animeInfoCommand,
   mangaInfoCommand,
+  traceAnimeCommand,
   wallpaperCommand,
+  // waifuCommand,
+  nekosCommand,
   
-  // General commands
-  helpCommand,
+  // Utility
+  stickerCommand,
+  // translateCommand,
+  // calcCommand,
+  // screenshotCommand,
+  
+  // Admin
+  banCommand,
+  unbanCommand,
+  // muteCommand,
+  // unmuteCommand,
+  // kickCommand,
+  
+  // General
   menuCommand,
+  helpCommand,
   pingCommand,
+  // infoCommand,
+  statsCommand,
+  // uptimeCommand,
 ]);
+
+/**
+ * Registry pusat seluruh command.
+ * Menambah fitur baru = tambah satu entry di sini + buat file handler-nya.
+ */
 
 /**
  * Map nama+alias -> command untuk lookup O(1).

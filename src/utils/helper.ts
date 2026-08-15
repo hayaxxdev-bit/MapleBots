@@ -27,18 +27,18 @@ export const FileHelper = {
 
   async cleanupDirectory(dirPath: string, maxAgeMinutes: number): Promise<number> {
     let cleanedCount = 0;
-    
+
     try {
       if (!fs.existsSync(dirPath)) return 0;
-      
+
       const files = await fs.promises.readdir(dirPath);
       const now = Date.now();
-      
+
       for (const file of files) {
         const filePath = path.join(dirPath, file);
         const stats = await fs.promises.stat(filePath);
         const ageMinutes = (now - stats.mtimeMs) / (60 * 1000);
-        
+
         if (ageMinutes > maxAgeMinutes) {
           await this.deleteFile(filePath);
           cleanedCount++;
@@ -47,7 +47,7 @@ export const FileHelper = {
     } catch (error) {
       logger.error(error as Error, 'Failed to cleanup directory');
     }
-    
+
     return cleanedCount;
   },
 
@@ -99,8 +99,30 @@ export const StringHelper = {
     const args = parts.slice(1);
     return { command, args };
   },
-};
 
+  /**
+   * Mengubah ukuran bytes menjadi format teks rapi (KB, MB, GB)
+   */
+  formatFileSize(bytes: number): string {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+  },
+
+  /**
+   * Memeriksa apakah sebuah string adalah URL valid
+   */
+  isUrl(url: string): boolean {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+};
 /**
  * Validation helpers
  */
@@ -117,7 +139,7 @@ export const ValidationHelper = {
   isAllowedDomain(url: string): boolean {
     try {
       const domain = new URL(url).hostname;
-      return config.allowedDomains.some(allowed => {
+      return config.allowedDomains.some((allowed) => {
         return domain === allowed || domain.endsWith(`.${allowed}`);
       });
     } catch {
@@ -135,14 +157,14 @@ export const ValidationHelper = {
  */
 export const TimeHelper = {
   delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   },
 
   formatDuration(seconds: number): string {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
-    
+
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
@@ -219,13 +241,13 @@ export class Queue {
 
   private async process(): Promise<void> {
     if (this.processing || this.activeCount >= this.maxConcurrent) return;
-    
+
     this.processing = true;
-    
+
     while (this.queue.length > 0 && this.activeCount < this.maxConcurrent) {
       const task = this.queue.shift();
       if (!task) continue;
-      
+
       this.activeCount++;
       try {
         await task();
@@ -235,7 +257,7 @@ export class Queue {
         this.activeCount--;
       }
     }
-    
+
     this.processing = false;
   }
 

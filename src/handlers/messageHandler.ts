@@ -1,10 +1,11 @@
 // src/handlers/message-handler.ts
-import type { WASocket, WAMessage, proto } from '@whiskeysockets/baileys';
+import type { WASocket, WAMessage } from '@whiskeysockets/baileys';
 import { logger, logHelper } from '../utils/logger';
 import { config } from '../config/config';
-import { StringHelper, ValidationHelper } from '../utils/helper';
+import { StringHelper } from '../utils/helper';
 import RateLimiter from '../utils/rate-limiter';
 import { handleIncomingMessage as handleCommandMessage } from './commandHandler';
+import type { ChatType, MessageLogContext } from '../utils/logger';
 
 /**
  * Extract message text from various message types.
@@ -12,21 +13,41 @@ import { handleIncomingMessage as handleCommandMessage } from './commandHandler'
 function extractMessageText(message: WAMessage): string {
   try {
     const msgContent = message.message;
-    
     if (!msgContent) return '';
     
-    // Extract text from different message types
-    if (msgContent.conversation) return msgContent.conversation;
-    if (msgContent.extendedTextMessage?.text) return msgContent.extendedTextMessage.text;
-    if (msgContent.imageMessage?.caption) return msgContent.imageMessage.caption;
-    if (msgContent.videoMessage?.caption) return msgContent.videoMessage.caption;
-    if (msgContent.documentMessage?.caption) return msgContent.documentMessage.caption;
-    
-    return '';
+    return (
+      msgContent.conversation ??
+      msgContent.extendedTextMessage?.text ??
+      msgContent.imageMessage?.caption ??
+      msgContent.videoMessage?.caption ??
+      msgContent.documentMessage?.caption ??
+      ''
+    );
   } catch (error) {
     logHelper.error('extract-text', error);
     return '';
   }
+}
+
+/**
+ * Extract message type.
+ */
+function extractMessageType(message: WAMessage): string {
+  const msgContent = message.message;
+  if (!msgContent) return 'unknown';
+  
+  if (msgContent.conversation) return 'text';
+  if (msgContent.extendedTextMessage) return 'text';
+  if (msgContent.imageMessage) return 'image';
+  if (msgContent.videoMessage) return 'video';
+  if (msgContent.audioMessage) return 'audio';
+  if (msgContent.documentMessage) return 'document';
+  if (msgContent.stickerMessage) return 'sticker';
+  if (msgContent.contactMessage) return 'contact';
+  if (msgContent.locationMessage) return 'location';
+  if (msgContent.reactionMessage) return 'reaction';
+  
+  return 'other';
 }
 
 /**
@@ -36,12 +57,28 @@ function extractSender(message: WAMessage): string {
   const sender = message.key.remoteJid || '';
   const participant = message.key.participant;
   
-  // If message is from group, use participant JID
   if (sender.endsWith('@g.us') && participant) {
     return participant;
   }
   
   return sender;
+}
+
+/**
+ * Get chat type.
+ */
+function getChatType(chatId: string): ChatType {
+  if (chatId.endsWith('@g.us')) return 'group';
+  if (chatId === 'status@broadcast') return 'status';
+  if (chatId.endsWith('@broadcast')) return 'broadcast';
+  return 'private';
+}
+
+/**
+ * Get sender name from message.
+ */
+function extractSenderName(message: WAMessage): string | undefined {
+  return message.pushName || undefined;
 }
 
 /**
@@ -86,33 +123,26 @@ async function isGroupAdmin(
 }
 
 /**
+ * Get group name.
+ */
+async function getGroupName(
+  sock: WASocket,
+  groupId: string,
+): Promise<string | undefined> {
+  try {
+    const groupMetadata = await sock.groupMetadata(groupId);
+    return groupMetadata.subject;
+  } catch (error) {
+    return undefined;
+  }
+}
+
+/**
  * Check if message contains any bot prefix.
  */
 function hasBotPrefix(text: string): boolean {
   const prefixes = [config.prefix, ...config.prefixAlt];
   return prefixes.some(prefix => text.startsWith(prefix));
-}
-
-/**
- * Extract command name from message text.
- */
-function extractCommandName(text: string): string | null {
-  if (!hasBotPrefix(text)) return null;
-  
-  const prefix = [config.prefix, ...config.prefixAlt].find(p => text.startsWith(p));
-  if (!prefix) return null;
-  
-  const withoutPrefix = text.slice(prefix.length).trim();
-  const [rawCommand] = withoutPrefix.split(/\s+/);
-  
-  return rawCommand ? rawCommand.toLowerCase() : null;
-}
-
-/**
- * Check if command is blocked.
- */
-function isBlockedCommand(command: string): boolean {
-  return config.blockedCommands.includes(command);
 }
 
 /**
@@ -125,30 +155,12 @@ async function handleAutoBehaviors(
   message: WAMessage,
 ): Promise<void> {
   try {
-    // Auto read
     if (config.autoRead) {
       await sock.readMessages([message.key]);
     }
     
-    // Auto typing (only in private chat)
     if (config.autoTyping && !isGroup) {
       await sock.sendPresenceUpdate('composing', chatId);
-      
-      // Clear typing after 3 seconds
-      setTimeout(async () => {
-        try {
-          await sock.sendPresenceUpdate('paused', chatId);
-        } catch (error) {
-          // Ignore errors
-        }
-      }, 3000);
-    }
-    
-    // Auto recording (only in private chat)
-    if (config.autoRecording && !isGroup) {
-      await sock.sendPresenceUpdate('recording', chatId);
-      
-      // Clear recording after 3 seconds
       setTimeout(async () => {
         try {
           await sock.sendPresenceUpdate('paused', chatId);
@@ -160,32 +172,6 @@ async function handleAutoBehaviors(
   } catch (error) {
     logHelper.error('auto-behaviors', error);
   }
-}
-
-/**
- * Handle non-command messages (optional, for future features).
- */
-async function handleRegularMessage(
-  sock: WASocket,
-  message: WAMessage,
-  chatId: string,
-  sender: string,
-  text: string,
-  isGroup: boolean,
-): Promise<void> {
-  // This function can be used for:
-  // - Auto-reply features
-  // - Keyword detection
-  // - AI chat (if enabled)
-  // - Other non-command features
-  
-  // For now, just log and ignore
-  logger.debug({
-    chatId,
-    sender,
-    text: StringHelper.truncate(text, 100),
-    isGroup,
-  }, 'Regular message (not command)');
 }
 
 /**
@@ -204,9 +190,18 @@ export async function handleIncomingMessage(
     // Extract message info
     const chatId = message.key.remoteJid || '';
     const sender = extractSender(message);
+    const senderName = extractSenderName(message);
     const text = extractMessageText(message).trim();
-    const isGroup = isGroupMessage(chatId);
+    const messageType = extractMessageType(message);
+    const chatType = getChatType(chatId);
+    const isGroup = chatType === 'group';
     const groupId = isGroup ? chatId : undefined;
+    
+    // Get group name if group message
+    let groupName: string | undefined;
+    if (isGroup) {
+      groupName = await getGroupName(sock, chatId);
+    }
     
     // Validate chat
     if (!chatId || chatId === 'status@broadcast') {
@@ -229,33 +224,38 @@ export async function handleIncomingMessage(
       }
     }
     
-    // Check if message is empty
+    // LOG INCOMING MESSAGE (PENTING!)
+    const messageLogContext: MessageLogContext = {
+      chatId,
+      sender,
+      senderName,
+      chatType,
+      groupName,
+      groupId,
+      messageType,
+      text: text || `[${messageType}]`,
+      isCommand: hasBotPrefix(text),
+      timestamp: new Date(),
+    };
+    
+    logHelper.incomingMessage(messageLogContext);
+    
+    // Handle empty messages
     if (!text) {
-      // Still handle auto-read for empty messages
       if (config.autoRead) {
         await sock.readMessages([message.key]);
       }
       return;
     }
     
-    // Log incoming message
-    logger.debug({
-      chatId,
-      sender,
-      text: StringHelper.truncate(text, 100),
-      isGroup,
-    }, 'Incoming message');
-    
     // Check if message is command
     if (hasBotPrefix(text)) {
-      const commandName = extractCommandName(text);
+      const commandName = text.slice(config.prefix.length).trim().split(/\s+/)[0]?.toLowerCase();
       
-      if (!commandName) {
-        return;
-      }
+      if (!commandName) return;
       
       // Check blocked commands
-      if (isBlockedCommand(commandName)) {
+      if (config.blockedCommands.includes(commandName)) {
         logger.debug(`Blocked command: ${commandName}`);
         return;
       }
@@ -268,10 +268,11 @@ export async function handleIncomingMessage(
           await sock.sendMessage(chatId, {
             text: '⚠️ Terlalu banyak permintaan. Silakan tunggu sebentar.',
           }, { quoted: message });
+          
+          logHelper.warn('rate-limit', `User ${sender.replace(/[^0-9]/g, '')} rate limited`);
           return;
         }
         
-        // Check command cooldown
         if (rateLimiter.isOnCooldown(sender, commandName)) {
           const remaining = rateLimiter.getCooldownRemaining(sender, commandName);
           await sock.sendMessage(chatId, {
@@ -281,25 +282,24 @@ export async function handleIncomingMessage(
         }
       }
       
-      // Check if sender is owner/admin
-      const ownerStatus = isOwner(sender);
-      const adminStatus = isGroup ? await isGroupAdmin(sock, chatId, sender) : false;
-      
-      // Log command execution
+      // Log command
       logHelper.command({
         sender,
         command: commandName,
         args: text.split(/\s+/).slice(1),
       });
       
-      // Process command through command handler
+      // Process command
       await handleCommandMessage(sock, message);
       
-      // Update stats (if needed)
-      logger.debug({ command: commandName, sender }, 'Command processed');
     } else {
-      // Handle regular message (non-command)
-      await handleRegularMessage(sock, message, chatId, sender, text, isGroup);
+      // Regular message (not command)
+      logger.debug({
+        chatId,
+        sender,
+        chatType,
+        text: StringHelper.truncate(text, 100),
+      }, 'Regular message (not command)');
     }
     
     // Handle auto behaviors
@@ -310,16 +310,16 @@ export async function handleIncomingMessage(
   }
 }
 
-/**
- * Export helper functions for testing.
- */
+// Export helpers for testing
 export {
   extractMessageText,
+  extractMessageType,
   extractSender,
+  extractSenderName,
+  getChatType,
   isGroupMessage,
   isOwner,
   isGroupAdmin,
+  getGroupName,
   hasBotPrefix,
-  extractCommandName,
-  isBlockedCommand,
 };

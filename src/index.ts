@@ -86,6 +86,7 @@ async function checkScraperHealth(scraperManager: ScraperManager): Promise<void>
   }
 }
 
+// Di function bootstrap()
 async function bootstrap(): Promise<void> {
   logger.info('🚀 Starting WhatsApp Bot...');
   logger.info(`Environment: ${config.isProduction ? 'Production' : 'Development'}`);
@@ -94,23 +95,26 @@ async function bootstrap(): Promise<void> {
   logger.info(`DNS: IPv4-first (forced)`);
   logger.info(`Time Zone: ${config.timezone}`);
   
+  // Log config summary
+  logger.info('📋 Config Summary:');
+  logger.info(`   ├ Bot Mode: ${config.botMode}`);
+  logger.info(`   ├ Auto Read: ${config.autoRead}`);
+  logger.info(`   ├ Auto Typing: ${config.autoTyping}`);
+  logger.info(`   ├ Rate Limit: ${config.rateLimitEnabled ? 'Enabled' : 'Disabled'}`);
+  logger.info(`   └ Features: ${Object.entries(config.features).filter(([, v]) => v).length} enabled`);
+  
   await testDnsResolution();
   
-  // Initialize services
   const services = await initializeServices();
   
-  // Check scraper health
   await checkScraperHealth(services.scraperManager);
   
-  // Start bot
   const bot = await startBot();
   
-  // Setup graceful shutdown
   setupGracefulShutdown(bot, services);
   
   logger.info('✅ Bot is ready and running!');
   
-  // Start background tasks
   startBackgroundTasks(services);
 }
 

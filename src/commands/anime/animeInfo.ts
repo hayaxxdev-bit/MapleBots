@@ -24,6 +24,8 @@ async function searchAnime(query: string): Promise<JikanAnimeResult | null> {
   if (!item) return null;
 
   return {
+    malId: 0, // atau masukkan ID anime jika ada
+    airing: false,
     title: item.title,
     synopsis: item.synopsis ?? 'Sinopsis tidak tersedia.',
     score: item.score,
@@ -45,6 +47,8 @@ async function searchManga(query: string): Promise<JikanAnimeResult | null> {
   if (!item) return null;
 
   return {
+    malId: 0, // atau masukkan ID anime jika ada
+    airing: false,
     title: item.title,
     synopsis: item.synopsis ?? 'Sinopsis tidak tersedia.',
     score: item.score,

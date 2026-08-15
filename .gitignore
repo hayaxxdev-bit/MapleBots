@@ -20,6 +20,8 @@ out/
 
 .husky
 
+cookies.json
+
 # Logs
 logs/
 *.log
