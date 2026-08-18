@@ -1,0 +1,177 @@
+# ============================================
+# Dependencies
+# ============================================
+
+node_modules/
+.pnpm-store/
+.pnp
+.pnp.js
+
+
+# ============================================
+# Build / Compilation
+# ============================================
+
+dist/
+build/
+out/
+*.tsbuildinfo
+
+
+# ============================================
+# Environment
+# ============================================
+
+.env
+.env.*
+!.env.example
+
+
+# ============================================
+# Secrets / Credentials
+# ============================================
+
+secrets/
+cookies.json
+creds.json
+auth_info/
+*.session.json
+
+
+# ============================================
+# Runtime Data
+# ============================================
+
+data/
+sessions/
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+temp/
+tmp/
+.cache/
+
+
+# ============================================
+# Database
+# ============================================
+
+*.db
+*.sqlite
+*.sqlite3
+
+
+# ============================================
+# Logs
+# ============================================
+
+logs/
+*.log
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+
+# ============================================
+# Testing / Coverage
+# ============================================
+
+coverage/
+*.lcov
+.nyc_output/
+
+
+# ============================================
+# Package / Cache
+# ============================================
+
+.npm/
+*.tgz
+
+.parcel-cache/
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+.eslintcache
+.stylelintcache
+
+jspm_packages/
+
+
+# ============================================
+# Framework Build
+# ============================================
+
+.next/
+.nuxt/
+.svelte-kit/
+.vuepress/dist/
+.serverless/
+.dynamodb/
+
+
+# ============================================
+# IDE
+# ============================================
+
+.idea/
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+.vscode-test/
+
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+
+# ============================================
+# OS
+# ============================================
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+
+# ============================================
+# Media / Temporary Files
+# ============================================
+
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.mp4
+*.mp3
+*.webp
+*.sticker
+
+
+# ============================================
+# Project Backups
+# ============================================
+
+backups/
+*.backup
+*.bak

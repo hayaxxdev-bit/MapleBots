@@ -1,0 +1,332 @@
+## 📚 **ANIME & MANGA COMMANDS**
+
+### Anime
+```
+.anime <judul>          - Cari info anime
+.animeongoing           - List anime ongoing
+.animecomplete          - List anime complete
+.animesearch <judul>    - Search anime
+.animedetail <id>       - Detail anime
+.animeeps <id>          - List episode anime
+.animebatch <judul>     - Download batch anime
+.otakudesu              - List anime dari otakudesu
+.samehadaku             - List anime dari samehadaku
+.anoboy                 - List anime dari anoboy
+.kuramanime             - List anime dari kuramanime
+.animegenre <genre>     - Cari anime berdasarkan genre
+.animeschedule          - Jadwal rilis anime
+.animerecommend         - Rekomendasi anime
+.animerandom            - Random anime
+.animetop               - Top anime
+.animetrailer <judul>   - Trailer anime
+.animechar <judul>      - Karakter anime
+.animequote             - Quote anime random
+.animewallpaper         - Wallpaper anime
+```
+
+### Manga
+```
+.manga <judul>          - Cari info manga
+.mangasearch <judul>    - Search manga
+.mangadetail <id>       - Detail manga
+.mangachapter <id>      - Baca chapter manga
+.mangalist              - List manga populer
+.mangagenre <genre>     - Manga berdasarkan genre
+.mangarecommend         - Rekomendasi manga
+.mangarandom            - Random manga
+.mangatop               - Top manga
+.komiku                 - List manga dari komiku
+.mangadex               - List manga dari mangadex
+```
+
+### Doujin
+```
+.doujin <judul>         - Cari doujin
+.doujinsearch <judul>   - Search doujin
+.doujinrandom           - Random doujin
+.doujintop              - Top doujin
+.nhentai <code>         - Doujin dari nhentai
+```
+
+## 🎬 **DOWNLOADER COMMANDS**
+
+### YouTube
+```
+.yt <url>               - Download video YouTube
+.ytmp3 <url>            - Download audio YouTube (MP3)
+.ytplay <judul>         - Cari dan download lagu YouTube
+.ytsearch <query>       - Search video YouTube
+.ytshort <url>          - Download YouTube Short
+.ytinfo <url>           - Info video YouTube
+```
+
+### TikTok
+```
+.tt <url>               - Download video TikTok
+.ttmp3 <url>            - Download audio TikTok
+.ttslide <url>          - Download slide TikTok
+.ttsearch <query>       - Search TikTok
+.ttuser <username>      - Download video user TikTok
+```
+
+### Instagram
+```
+.ig <url>               - Download video/foto Instagram
+.igstory <username>     - Download story Instagram
+.igreel <url>           - Download reel Instagram
+.igprofile <username>   - Info profile Instagram
+.ighighlight <username> - Download highlight Instagram
+```
+
+### Facebook
+```
+.fb <url>               - Download video Facebook
+.fbreel <url>           - Download reel Facebook
+.fbstory <username>     - Download story Facebook
+```
+
+### Twitter/X
+```
+.tw <url>               - Download video Twitter
+.twmp3 <url>            - Download audio Twitter
+.twimage <url>          - Download image Twitter
+```
+
+## 🎨 **FUN & ENTERTAINMENT**
+
+### Waifu
+```
+.waifu                  - Random waifu
+.waifu <kategori>       - Waifu kategori (neko, shiro, etc)
+.waifusfw               - Waifu SFW
+.waifunsfw              - Waifu NSFW (khusus dewasa)
+.husbando               - Random husbando
+.waifurate              - Rate waifu
+```
+
+### Nekos
+```
+.nekos                  - Random nekos
+.nekos <kategori>       - Nekos kategori
+.nekogif                - Neko GIF
+.nekoimg                - Neko image
+```
+
+### Game
+```
+.game                   - List game
+.tictactoe @user        - Main tictactoe
+.suit @user             - Main suit
+.tebakgambar            - Tebak gambar
+.tebakkata              - Tebak kata
+.caklontong             - Kuis cak lontong
+.family100              - Game family 100
+.slots                  - Main slots
+.dadu                   - Lempar dadu
+.truth                  - Truth
+.dare                   - Dare
+```
+
+### Sticker
+```
+.sticker                - Buat sticker dari gambar
+.stickergif             - Buat sticker GIF
+.stickerimg <url>       - Sticker dari URL
+.stickerpack            - Buat sticker pack
+.tosticker              - Ubah jadi sticker
+.stickermeme            - Sticker meme
+```
+
+## 🛠️ **UTILITY COMMANDS**
+
+### Information
+```
+.info                   - Info bot
+.ping                   - Cek ping bot
+.speed                  - Test speed
+.runtime                - Uptime bot
+.stats                  - Statistik bot
+.server                 - Info server
+```
+
+### Tools
+```
+.translate <teks>       - Translate teks
+.tts <teks>             - Text to speech
+.ocr                    - Extract text dari gambar
+.qr <teks>              - Buat QR code
+.qrread                 - Baca QR code
+.shortlink <url>        - Shorten URL
+.tinyurl <url>          - Shorten URL
+.base64 <teks>          - Encode base64
+.debase64 <teks>        - Decode base64
+.hash <teks>            - Generate hash
+```
+
+### Weather & News
+```
+.weather <kota>         - Info cuaca
+.cuaca <kota>           - Info cuaca
+.news                   - Berita terbaru
+.news <kategori>        - Berita kategori
+.berita                 - Berita Indonesia
+```
+
+### Calculator
+```
+.calc <rumus>           - Kalkulator
+.kalkulator             - Kalkulator
+.math <rumus>           - Matematika
+.convert <angka>        - Konversi satuan
+```
+
+## 👥 **GROUP COMMANDS**
+
+### Group Management
+```
+.groupinfo              - Info group
+.grouplist              - List member group
+.groupopen              - Buka group
+.groupclose             - Tutup group
+.groupsettings          - Setting group
+.grouplink              - Link group
+.grouprevoke            - Reset link group
+```
+
+### Member Management
+```
+.add @user              - Tambah member
+.kick @user             - Keluarkan member
+.promote @user          - Jadikan admin
+.demote @user           - Turunkan admin
+.mute @user             - Mute member
+.unmute @user           - Unmute member
+```
+
+### Group Fun
+```
+.tagall                 - Tag semua member
+.hidetag                - Tag tersembunyi
+.groupvote              - Voting group
+.groupgame              - Game group
+```
+
+## 🔐 **OWNER COMMANDS**
+
+### Bot Control
+```
+.owner                  - Menu owner
+.botstatus              - Status bot
+.botstats               - Statistik bot
+.botrestart             - Restart bot
+.botshutdown            - Matikan bot
+.botbackup              - Backup database
+.botrestore             - Restore database
+```
+
+### User Management
+```
+.ban @user              - Ban user
+.unban @user            - Unban user
+.banlist                - List banned user
+.addowner <nomor>       - Tambah owner
+.removeowner <nomor>    - Hapus owner
+```
+
+### Broadcast
+```
+.broadcast <pesan>      - Broadcast ke semua chat
+.bc <pesan>             - Broadcast singkat
+.bcgroup <pesan>        - Broadcast ke group
+.bcuser <nomor> <pesan> - Kirim ke user spesifik
+```
+
+### Configuration
+```
+.setprefix <prefix>     - Ganti prefix
+.setname <nama>         - Ganti nama bot
+.setbio <bio>           - Ganti bio bot
+.setmode <mode>         - Ganti mode bot
+.setfeature <nama>      - Toggle fitur
+```
+
+## 📊 **DATABASE COMMANDS**
+
+```
+.dbget <key>            - Get data
+.dbset <key> <value>    - Set data
+.dbdelete <key>         - Delete data
+.dblist                 - List data
+.dbexport               - Export database
+.dbimport               - Import database
+```
+
+## 🔍 **SEARCH COMMANDS**
+
+```
+.google <query>         - Search Google
+.youtube <query>        - Search YouTube
+.wikipedia <query>      - Search Wikipedia
+.github <username>      - Search GitHub
+.npm <package>          - Search npm
+```
+
+## 📝 **TEXT COMMANDS**
+
+```
+.textmaker <teks>       - Buat text art
+.textstyle <teks>       - Style text
+.textbold <teks>        - Text bold
+.textitalic <teks>      - Text italic
+.textrandom <teks>      - Text random style
+```
+
+## 🎯 **RECOMMENDED COMMANDS TO ADD**
+
+1. **AI Commands**:
+```
+.ai <pertanyaan>        - AI chat
+.gpt <pertanyaan>       - GPT chat
+.aimage <deskripsi>     - Generate image
+.art <deskripsi>        - Generate art
+```
+
+2. **Music Commands**:
+```
+.play <judul>           - Putar musik
+.music <judul>          - Cari musik
+.lyric <judul>          - Cari lirik
+.chord <judul>          - Cari chord
+```
+
+3. **Reminder Commands**:
+```
+.remind <waktu> <pesan> - Set reminder
+.reminderlist           - List reminder
+.reminderdelete <id>    - Hapus reminder
+.alarm <waktu>          - Set alarm
+```
+
+4. **Note Commands**:
+```
+.note <judul> <isi>     - Buat note
+.notelist               - List note
+.notedelete <judul>     - Hapus note
+```
+
+5. **Money Commands**:
+```
+.saldo                  - Cek saldo
+.transfer <nomor> <jumlah> - Transfer
+.topup <jumlah>         - Top up
+.daily                  - Bonus harian
+```
+
+6. **Premium Commands**:
+```
+.premium                - Info premium
+.buypremium             - Beli premium
+.cekpremium             - Cek status premium
+```
+
+Pilih command yang sesuai dengan kebutuhan bot kamu dan implementasikan secara bertahap! 🚀

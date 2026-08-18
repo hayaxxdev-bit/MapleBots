@@ -1,0 +1,41 @@
+{
+  "watch": [
+    "src",
+    ".env"
+  ],
+  "ext": "ts,json,env",
+
+  "ignore": [
+    "node_modules/**",
+    "dist/**",
+
+    "data/**",
+    "sessions/**",
+    "temp/**",
+    "logs/**",
+    ".cache/**",
+
+    "tests/**",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+
+    "public/**"
+  ],
+
+  "exec": "ts-node -r tsconfig-paths/register src/index.ts",
+
+  "env": {
+    "NODE_ENV": "development",
+    "TS_NODE_TRANSPILE_ONLY": "true"
+  },
+
+  "delay": 1000,
+
+  "verbose": false,
+
+  "restartable": "rs",
+
+  "events": {
+    "restart": "clear || cls"
+  }
+}

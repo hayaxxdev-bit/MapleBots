@@ -1,0 +1,154 @@
+{
+  "compilerOptions": {
+    /* =========================================
+       Language & Target
+       ========================================= */
+
+    "target": "ES2022",
+    "lib": ["ES2022"],
+
+    /* =========================================
+       Module
+       ========================================= */
+
+    "module": "CommonJS",
+    "moduleResolution": "node",
+
+    /* =========================================
+       Project Structure
+       ========================================= */
+
+    "rootDir": "src",
+    "outDir": "dist",
+
+    /* =========================================
+       Type Safety
+       ========================================= */
+
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+
+    /* =========================================
+       Additional Safety
+       ========================================= */
+
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+
+    /* =========================================
+       Compatibility
+       ========================================= */
+
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* =========================================
+       JSON
+       ========================================= */
+
+    "resolveJsonModule": true,
+
+    /* =========================================
+       Build Output
+       ========================================= */
+
+    "declaration": false,
+    "sourceMap": true,
+    "inlineSources": true,
+    "removeComments": false,
+
+    /* =========================================
+       Advanced
+       ========================================= */
+
+    "preserveConstEnums": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": true,
+
+    /* =========================================
+       Path Aliases
+       ========================================= */
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+
+      "@config/*": ["src/config/*"],
+      "@commands/*": ["src/commands/*"],
+      "@handlers/*": ["src/handlers/*"],
+      "@services/*": ["src/services/*"],
+      "@scrapers/*": ["src/scrapers/*"],
+      "@utils/*": ["src/utils/*"],
+      "@types/*": ["src/types/*"],
+
+      "@infrastructure/*": [
+        "src/infrastructure/*"
+      ],
+
+      "@platforms/*": [
+        "src/platforms/*"
+      ],
+
+      "@web/*": [
+        "src/web/*"
+      ]
+    },
+
+    /* =========================================
+       Debugging
+       ========================================= */
+
+    "sourceRoot": "/"
+  },
+
+  /* ===========================================
+     Source Files
+     =========================================== */
+
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts"
+  ],
+
+  /* ===========================================
+     Excluded Files
+     =========================================== */
+
+  "exclude": [
+    "node_modules",
+    "dist",
+    "data",
+    "temp",
+    "logs",
+    "tests",
+    "scripts",
+    ".cache"
+  ],
+
+  /* ===========================================
+     ts-node Development Configuration
+     =========================================== */
+
+  "ts-node": {
+    "transpileOnly": true,
+    "files": true,
+    "require": [
+      "tsconfig-paths/register"
+    ],
+    "compilerOptions": {
+      "module": "CommonJS"
+    }
+  }
+}

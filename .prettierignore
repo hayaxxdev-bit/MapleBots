@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+.pnpm-store/
+
+# Build
+dist/
+build/
+out/
+
+# Environment
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+
+# Data
+data/
+sessions/
+temp/
+.cache/
+
+# Coverage
+coverage/
+
+# Generated
+*.min.js
+*.min.css
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
