@@ -2,67 +2,166 @@
   'use strict';
 
   const POLL_MS = 5000;
+  const HISTORY_LIMIT = 30;
+
+  /*
+   * IMPORTANT
+   *
+   * Frontend boleh di-host di Vercel.
+   * Request /api/* kemudian diteruskan oleh Vercel
+   * ke MapleBot/Pterodactyl melalui vercel.json.
+   *
+   * Jadi jangan gunakan localhost di browser.
+   */
+  const API_BASE = '';
+
   const state = {
     status: null,
-    metrics: null,
     apis: [],
     notifications: [],
-    previousOverall: null,
-    history: { cpu: [], memory: [] },
+    history: {
+      cpu: [],
+      memory: [],
+    },
   };
 
   const $ = (id) => document.getElementById(id);
 
   const endpoints = {
-    status: '/api/status',
-    metrics: '/api/metrics',
-    apis: '/api/apis',
-    notifications: '/api/notifications',
+    status: `${API_BASE}/api/status`,
+    system: `${API_BASE}/api/system`,
+    bot: `${API_BASE}/api/bot`,
+    metrics: `${API_BASE}/api/metrics`,
+    health: `${API_BASE}/api/health`,
+    apis: `${API_BASE}/api/apis`,
+    notifications: `${API_BASE}/api/notifications`,
+    config: `${API_BASE}/api/config`,
   };
 
   async function getJson(url) {
     const response = await fetch(url, {
-      headers: { Accept: 'application/json' },
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
       cache: 'no-store',
     });
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+
+    if (!response.ok) {
+      throw new Error(`${response.status} ${response.statusText}`);
+    }
+
     return response.json();
   }
 
   function firstDefined(...values) {
-    return values.find((v) => v !== undefined && v !== null);
+    return values.find((value) => value !== undefined && value !== null);
   }
 
   function formatBytes(value) {
-    if (value == null || Number.isNaN(Number(value))) return '—';
+    if (value === undefined || value === null) {
+      return '—';
+    }
+
     const bytes = Number(value);
-    if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+
+    if (!Number.isFinite(bytes)) {
+      return '—';
+    }
+
+    if (bytes < 1024) {
+      return `${bytes.toFixed(0)} B`;
+    }
+
+    if (bytes < 1024 ** 2) {
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    }
+
+    if (bytes < 1024 ** 3) {
+      return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+    }
+
     return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
   }
 
   function formatDuration(seconds) {
-    if (seconds == null) return '—';
-    let s = Math.max(0, Math.floor(Number(seconds)));
-    const d = Math.floor(s / 86400);
-    s %= 86400;
-    const h = Math.floor(s / 3600);
-    s %= 3600;
-    const m = Math.floor(s / 60);
-    s %= 60;
+    if (seconds === undefined || seconds === null) {
+      return '—';
+    }
+
+    let value = Number(seconds);
+
+    if (!Number.isFinite(value)) {
+      return '—';
+    }
+
+    value = Math.max(0, Math.floor(value));
+
+    const days = Math.floor(value / 86400);
+    value %= 86400;
+
+    const hours = Math.floor(value / 3600);
+    value %= 3600;
+
+    const minutes = Math.floor(value / 60);
+    const secs = value % 60;
+
     const parts = [];
-    if (d) parts.push(`${d}d`);
-    if (h) parts.push(`${h}h`);
-    if (m) parts.push(`${m}m`);
-    if (!parts.length || s) parts.push(`${s}s`);
+
+    if (days) {
+      parts.push(`${days}d`);
+    }
+
+    if (hours) {
+      parts.push(`${hours}h`);
+    }
+
+    if (minutes) {
+      parts.push(`${minutes}m`);
+    }
+
+    if (!parts.length || secs) {
+      parts.push(`${secs}s`);
+    }
+
     return parts.join(' ');
   }
 
   function formatTime(value) {
-    if (!value) return '—';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return String(value);
-    return d.toLocaleTimeString('id-ID', { hour12: false });
+    if (!value) {
+      return '—';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
+    }
+
+    return date.toLocaleTimeString('id-ID', {
+      hour12: false,
+    });
+  }
+
+  function formatDetail(value) {
+    if (value === undefined || value === null) {
+      return '—';
+    }
+
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+
+    return String(value);
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
   }
 
   function statusClass(status) {
@@ -71,317 +170,998 @@
 
   function setConnection(online, text) {
     const pill = $('connectionPill');
-    pill.classList.toggle('online', online);
-    pill.classList.toggle('offline', !online);
-    $('connectionText').textContent = text;
-  }
 
-  function renderOverview(report) {
-    state.status = report;
-    const overall = report?.status || 'unknown';
-    const badge = $('overallBadge');
-    badge.textContent = overall.toUpperCase();
-    badge.className = `status-badge ${statusClass(overall)}`;
-
-    const whatsapp = (report.services || []).find((s) => s.name === 'WhatsApp');
-    const active = whatsapp?.status === 'healthy';
-
-    $('heroTitle').textContent = active ? 'MapleBot is online' : 'MapleBot Operations';
-    $('heroMessage').textContent = whatsapp?.message || 'Application telemetry is available.';
-    $('healthTimestamp').textContent = report.timestamp
-      ? `Updated ${formatTime(report.timestamp)}`
-      : '—';
-
-    const config = report.configuration || report.config || {};
-    $('envValue').textContent = firstDefined(
-      config.environment,
-      config.nodeEnv,
-      report.environment,
-      '—'
-    );
-    $('modeValue').textContent = firstDefined(config.mode, '—');
-    $('botValue').textContent = firstDefined(config.bot, config.botName, 'MapleBot');
-
-    renderServices(report.services || []);
-  }
-
-  function renderServices(services) {
-    const html =
-      services
-        .map(
-          (service) => `
-      <article class="service-card">
-        <div class="service-top">
-          <span class="service-name">${escapeHtml(service.name || 'Unknown')}</span>
-          <i class="dot ${statusClass(service.status)}"></i>
-        </div>
-        <div class="service-message">${escapeHtml(service.message || 'No status message.')}</div>
-        <div class="service-latency">${service.latency == null ? '—' : `${service.latency} ms`}</div>
-      </article>
-    `
-        )
-        .join('') || `<div class="empty">No service data.</div>`;
-
-    $('serviceGrid').innerHTML = html;
-    $('servicesGrid').innerHTML = html;
-  }
-
-  function renderMetrics(data) {
-    if (!data) return;
-    state.metrics = data;
-
-    const cpu = Number(firstDefined(data.cpuUsage, data.cpu, data.process?.cpu, data.runtime?.cpu));
-    const memory = Number(
-      firstDefined(data.memoryUsage, data.memory, data.system?.memoryUsage, data.runtime?.memory)
-    );
-
-    if (Number.isFinite(cpu)) {
-      $('cpuValue').textContent = `${cpu.toFixed(1)}%`;
-      $('cpuBar').style.width = `${Math.min(100, Math.max(0, cpu))}%`;
-      state.history.cpu.push(cpu);
-      state.history.cpu = state.history.cpu.slice(-30);
-      $('cpuHistoryValue').textContent = `${cpu.toFixed(1)}%`;
-      drawChart($('cpuChart'), state.history.cpu);
+    if (pill) {
+      pill.classList.toggle('online', online);
+      pill.classList.toggle('offline', !online);
     }
 
-    if (Number.isFinite(memory)) {
-      $('memoryValue').textContent = `${memory.toFixed(1)}%`;
-      $('memoryBar').style.width = `${Math.min(100, Math.max(0, memory))}%`;
-      state.history.memory.push(memory);
-      state.history.memory = state.history.memory.slice(-30);
-      $('memoryHistoryValue').textContent = `${memory.toFixed(1)}%`;
-      drawChart($('memoryChart'), state.history.memory);
+    const connectionText = $('connectionText');
+
+    if (connectionText) {
+      connectionText.textContent = text;
     }
-
-    const load = firstDefined(data.systemLoad, data.load, data.system?.load);
-    $('loadValue').textContent = Array.isArray(load)
-      ? load.map((v) => Number(v).toFixed(2)).join(' / ')
-      : (load ?? '—');
-
-    const rss = firstDefined(data.rss, data.process?.rss, data.memory?.rss);
-    $('rssValue').textContent = typeof rss === 'number' ? formatBytes(rss) : rss || '—';
-
-    $('messagesValue').textContent = firstDefined(
-      data.messagesProcessed,
-      data.messages,
-      data.runtime?.messages,
-      0
-    );
-    $('commandsValue').textContent =
-      `${firstDefined(data.commandsExecuted, data.commands, data.runtime?.commands, 0)} cmds`;
-
-    renderRuntime(data);
   }
 
-  function renderRuntime(data) {
-    const rows = [
-      ['PID', firstDefined(data.pid, data.process?.pid)],
-      ['RSS', firstDefined(data.rss, data.process?.rss)],
-      ['Heap used', firstDefined(data.heapUsed, data.process?.heapUsed)],
-      ['Heap total', firstDefined(data.heapTotal, data.process?.heapTotal)],
-      ['External', firstDefined(data.external, data.process?.external)],
-      ['Process uptime', formatDuration(firstDefined(data.processUptime, data.process?.uptime))],
-      ['Node.js', firstDefined(data.nodeVersion, data.node, data.version)],
-    ];
-    $('runtimePanel').innerHTML =
-      `<div class="panel-header"><div><span class="eyebrow">NODE PROCESS</span><h2>Runtime</h2></div></div>
-      <div class="detail-list">${rows.map(([k, v]) => `<div class="detail-row"><span>${escapeHtml(k)}</span><strong>${escapeHtml(formatDetail(v))}</strong></div>`).join('')}</div>`;
+  /*
+   * ============================================================
+   * STATUS
+   * ============================================================
+   */
 
-    const cfg = firstDefined(data.configuration, data.config, {});
-    const configRows = Object.entries(cfg).slice(0, 12);
-    $('configPanel').innerHTML =
-      `<div class="panel-header"><div><span class="eyebrow">CONFIGURATION</span><h2>Public snapshot</h2></div></div>
-      <div class="detail-list">${configRows.length ? configRows.map(([k, v]) => `<div class="detail-row"><span>${escapeHtml(k)}</span><strong>${escapeHtml(formatDetail(v))}</strong></div>`).join('') : `<div class="empty">Configuration snapshot is not exposed by this endpoint.</div>`}</div>`;
-  }
-
-  function renderApis(list) {
-    const providers = Array.isArray(list) ? list : list?.providers || list?.apis || [];
-    state.apis = providers;
-
-    const enabled = providers.filter((p) => p.enabled !== false).length;
-    $('apiSummary').textContent = `${providers.length} providers · ${enabled} enabled`;
-
-    $('apiGrid').innerHTML = providers.length
-      ? providers
-          .map((p) => {
-            const health = p.health || {};
-            const status = firstDefined(health.status, p.status, 'unknown');
-            return `<article class="api-card">
-        <div class="api-category">${escapeHtml(p.category || 'provider')}</div>
-        <div class="api-name">${escapeHtml(p.name || p.id || 'Unknown API')}</div>
-        <div class="api-id">${escapeHtml(p.id || '—')}</div>
-        <div class="api-status"><i class="dot ${statusClass(status)}"></i><span>${escapeHtml(status)}</span></div>
-      </article>`;
-          })
-          .join('')
-      : `<div class="empty">No API provider data.</div>`;
-  }
-
-  function renderNotifications(list) {
-    const items = Array.isArray(list) ? list : list?.notifications || list?.history || [];
-    state.notifications = items;
-    $('notificationCount').textContent = `${items.length} events`;
-
-    if (!items.length) {
-      $('notificationList').innerHTML = `<div class="empty">No recent notifications.</div>`;
+  function renderStatus(report) {
+    if (!report) {
       return;
     }
 
-    $('notificationList').innerHTML = items
-      .slice(0, 30)
-      .map((item) => {
-        const type = String(item.type || item.event || 'info').toLowerCase();
-        const icon = type.includes('error')
-          ? '✕'
-          : type.includes('reconnect')
-            ? '↻'
-            : type.includes('login')
-              ? '↪'
-              : '●';
-        return `<div class="notification-item">
-        <div class="notification-time">${escapeHtml(formatTime(item.timestamp || item.createdAt || item.time))}</div>
-        <div class="notification-icon">${icon}</div>
-        <div>
-          <div class="notification-title">${escapeHtml(item.title || item.type || item.event || 'Notification')}</div>
-          <div class="notification-message">${escapeHtml(item.message || item.description || '')}</div>
-        </div>
-      </div>`;
-      })
-      .join('');
-  }
+    state.status = report;
 
-  function drawChart(canvas, values) {
-    if (!canvas || values.length < 1) return;
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const width = Math.max(300, rect.width);
-    const height = 170;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, width, height);
+    const bot = report.bot || {};
+    const system = report.system || {};
+    const health = report.health || {};
+    const metrics = report.metrics || {};
+    const config = report.config || {};
 
-    const pad = 8;
-    const max = Math.max(100, ...values);
-    const min = 0;
-    const step = values.length > 1 ? (width - pad * 2) / (values.length - 1) : 0;
+    const overall = health.status || 'unknown';
 
-    ctx.strokeStyle = 'rgba(255,255,255,.055)';
-    ctx.lineWidth = 1;
-    for (let y = 0; y <= 4; y++) {
-      const yy = pad + ((height - pad * 2) * y) / 4;
-      ctx.beginPath();
-      ctx.moveTo(0, yy);
-      ctx.lineTo(width, yy);
-      ctx.stroke();
+    const badge = $('overallBadge');
+
+    if (badge) {
+      badge.textContent = overall.toUpperCase();
+      badge.className = `status-badge ${statusClass(overall)}`;
     }
 
-    const points = values.map((v, i) => ({
-      x: pad + step * i,
-      y: height - pad - ((v - min) / (max - min)) * (height - pad * 2),
-    }));
+    const active = bot.connected === true;
 
-    if (points.length > 1) {
-      const gradient = ctx.createLinearGradient(0, 0, 0, height);
-      gradient.addColorStop(0, 'rgba(217,255,114,.22)');
-      gradient.addColorStop(1, 'rgba(217,255,114,0)');
-      ctx.beginPath();
-      ctx.moveTo(points[0].x, height - pad);
-      points.forEach((p) => ctx.lineTo(p.x, p.y));
-      ctx.lineTo(points.at(-1).x, height - pad);
-      ctx.closePath();
-      ctx.fillStyle = gradient;
-      ctx.fill();
+    const heroTitle = $('heroTitle');
 
-      ctx.beginPath();
-      points.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
-      ctx.strokeStyle = '#d9ff72';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+    if (heroTitle) {
+      heroTitle.textContent = active
+        ? 'MapleBot is online'
+        : 'MapleBot Operations';
     }
-  }
 
-  function formatDetail(value) {
-    if (value == null) return '—';
-    if (typeof value === 'number' && value > 1024 * 1024) return formatBytes(value);
-    if (typeof value === 'object') return JSON.stringify(value);
-    return String(value);
-  }
+    const heroMessage = $('heroMessage');
 
-  function escapeHtml(value) {
-    return String(value ?? '').replace(
-      /[&<>"']/g,
-      (c) =>
-        ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#039;',
-        })[c]
+    if (heroMessage) {
+      heroMessage.textContent = active
+        ? 'WhatsApp connection is active.'
+        : 'WhatsApp connection is not active.';
+    }
+
+    const healthTimestamp = $('healthTimestamp');
+
+    if (healthTimestamp) {
+      healthTimestamp.textContent = report.timestamp
+        ? `Updated ${formatTime(report.timestamp)}`
+        : '—';
+    }
+
+    /*
+     * Environment
+     */
+
+    const environment = config.environment || {};
+
+    setText('envValue', firstDefined(
+      environment.nodeEnv,
+      '—'
+    ));
+
+    setText('modeValue', firstDefined(
+      environment.botMode,
+      '—'
+    ));
+
+    setText('botValue', firstDefined(
+      environment.botName,
+      bot.user?.name,
+      'MapleBot'
+    ));
+
+    /*
+     * System + metrics
+     */
+
+    renderSystem(system);
+    renderMetrics(metrics);
+
+    /*
+     * Bot
+     */
+
+    renderBot(bot);
+
+    /*
+     * Health
+     */
+
+    renderServices(health.services || []);
+
+    /*
+     * Config
+     */
+
+    renderConfig(config);
+
+    setConnection(
+      true,
+      `Telemetry connected · ${formatTime(report.timestamp)}`
     );
   }
 
-  async function refresh() {
-    const started = performance.now();
-    try {
-      const status = await getJson(endpoints.status);
-      renderOverview(status);
-      setConnection(true, 'Telemetry connected');
+  function renderSystem(system) {
+    if (!system) {
+      return;
+    }
 
-      const [metrics, apis, notifications] = await Promise.allSettled([
-        getJson(endpoints.metrics),
-        getJson(endpoints.apis),
-        getJson(endpoints.notifications),
-      ]);
+    const cpu = system.cpu || {};
+    const memory = system.memory || {};
+    const node = system.node || {};
+    const process = system.process || {};
 
-      if (metrics.status === 'fulfilled') renderMetrics(metrics.value);
-      if (apis.status === 'fulfilled') renderApis(apis.value);
-      if (notifications.status === 'fulfilled') renderNotifications(notifications.value);
+    const cpuUsage = firstDefined(
+      cpu.usagePercent,
+      cpu.usage
+    );
 
-      $('lastUpdate').textContent =
-        `Updated ${formatTime(new Date())} · ${Math.round(performance.now() - started)}ms`;
+    const memoryUsage = firstDefined(
+      memory.usagePercent,
+      0
+    );
 
-      if (state.previousOverall && state.previousOverall !== status.status) {
-        toast(`Health changed: ${state.previousOverall} → ${status.status}`);
+    const loadAverage = cpu.loadAverage || {};
+
+    const load = [
+      loadAverage.oneMinute,
+      loadAverage.fiveMinutes,
+      loadAverage.fifteenMinutes,
+    ]
+      .filter((value) => value !== undefined && value !== null)
+      .map((value) => Number(value).toFixed(2))
+      .join(' / ');
+
+    setText(
+      'loadValue',
+      load || '—'
+    );
+
+    setText(
+      'rssValue',
+      formatBytes(process.memory?.rss)
+    );
+
+    setText(
+      'nodeProcessValue',
+      node.version || '—'
+    );
+
+    setText(
+      'processUptimeValue',
+      formatDuration(process.uptime)
+    );
+
+    /*
+     * Runtime panel
+     */
+
+    const runtimePanel = $('runtimePanel');
+
+    if (runtimePanel) {
+      const rows = [
+        ['PID', process.pid],
+        ['RSS', process.memory?.rss],
+        ['Heap used', process.memory?.heapUsed],
+        ['Heap total', process.memory?.heapTotal],
+        ['External', process.memory?.external],
+        ['Process uptime', formatDuration(process.uptime)],
+        ['Node.js', node.version],
+        ['Platform', system.platform],
+        ['Architecture', system.arch],
+      ];
+
+      runtimePanel.innerHTML = `
+        <div class="panel-header">
+          <div>
+            <span class="eyebrow">NODE PROCESS</span>
+            <h2>Runtime</h2>
+          </div>
+        </div>
+
+        <div class="detail-list">
+          ${rows
+            .map(
+              ([key, value]) => `
+                <div class="detail-row">
+                  <span>${escapeHtml(key)}</span>
+                  <strong>${escapeHtml(
+                    key === 'RSS' ||
+                    key === 'Heap used' ||
+                    key === 'Heap total' ||
+                    key === 'External'
+                      ? formatBytes(value)
+                      : formatDetail(value)
+                  )}</strong>
+                </div>
+              `
+            )
+            .join('')}
+        </div>
+      `;
+    }
+
+    /*
+     * System values can be used as fallback
+     * if metrics endpoint is unavailable.
+     */
+
+    renderCpu(cpuUsage);
+    renderMemory(memoryUsage);
+  }
+
+  function renderBot(bot) {
+    if (!bot) {
+      return;
+    }
+
+    const messages = Number(
+      firstDefined(
+        bot.messagesProcessed,
+        0
+      )
+    );
+
+    const commands = Number(
+      firstDefined(
+        bot.commandsExecuted,
+        0
+      )
+    );
+
+    setText('messagesValue', messages);
+    setText('commandsValue', `${commands} cmds`);
+
+    /*
+     * Optional dashboard fields.
+     */
+
+    setText(
+      'botStatusValue',
+      bot.connected ? 'Connected' : 'Disconnected'
+    );
+
+    setText(
+      'botUptimeValue',
+      formatDuration(
+        bot.uptime
+      )
+    );
+
+    setText(
+      'botAccountValue',
+      firstDefined(
+        bot.user?.name,
+        '—'
+      )
+    );
+  }
+
+  /*
+   * ============================================================
+   * METRICS
+   * ============================================================
+   */
+
+  function renderMetrics(metrics) {
+    if (!metrics) {
+      return;
+    }
+
+    const cpu = Number(
+      firstDefined(
+        metrics.cpuUsage,
+        0
+      )
+    );
+
+    const memory = Number(
+      firstDefined(
+        metrics.memoryUsage,
+        0
+      )
+    );
+
+    if (Number.isFinite(cpu)) {
+      renderCpu(cpu);
+    }
+
+    if (Number.isFinite(memory)) {
+      renderMemory(memory);
+    }
+
+    /*
+     * These values come directly from /api/metrics.
+     */
+
+    setText(
+      'messagesValue',
+      firstDefined(
+        metrics.messagesProcessed,
+        0
+      )
+    );
+
+    setText(
+      'commandsValue',
+      `${firstDefined(
+        metrics.commandsExecuted,
+        0
+      )} cmds`
+    );
+  }
+
+  function renderCpu(value) {
+    if (!Number.isFinite(Number(value))) {
+      return;
+    }
+
+    const cpu = Number(value);
+
+    setText(
+      'cpuValue',
+      `${cpu.toFixed(1)}%`
+    );
+
+    setWidth(
+      'cpuBar',
+      cpu
+    );
+
+    state.history.cpu.push(cpu);
+
+    state.history.cpu = state.history.cpu.slice(
+      -HISTORY_LIMIT
+    );
+
+    setText(
+      'cpuHistoryValue',
+      `${cpu.toFixed(1)}%`
+    );
+
+    drawChart(
+      $('cpuChart'),
+      state.history.cpu
+    );
+  }
+
+  function renderMemory(value) {
+    if (!Number.isFinite(Number(value))) {
+      return;
+    }
+
+    const memory = Number(value);
+
+    setText(
+      'memoryValue',
+      `${memory.toFixed(1)}%`
+    );
+
+    setWidth(
+      'memoryBar',
+      memory
+    );
+
+    state.history.memory.push(memory);
+
+    state.history.memory = state.history.memory.slice(
+      -HISTORY_LIMIT
+    );
+
+    setText(
+      'memoryHistoryValue',
+      `${memory.toFixed(1)}%`
+    );
+
+    drawChart(
+      $('memoryChart'),
+      state.history.memory
+    );
+  }
+
+  /*
+   * ============================================================
+   * HEALTH
+   * ============================================================
+   */
+
+  function renderHealth(health) {
+    if (!health) {
+      return;
+    }
+
+    const overall = health.status || 'unknown';
+
+    const badge = $('overallBadge');
+
+    if (badge) {
+      badge.textContent = overall.toUpperCase();
+      badge.className = `status-badge ${statusClass(overall)}`;
+    }
+
+    renderServices(
+      health.services || []
+    );
+
+    const whatsapp = (health.services || []).find(
+      (service) => service.name === 'WhatsApp'
+    );
+
+    if (whatsapp) {
+      setText(
+        'heroMessage',
+        whatsapp.message || 'WhatsApp service active.'
+      );
+    }
+
+    setText(
+      'healthTimestamp',
+      health.timestamp
+        ? `Updated ${formatTime(health.timestamp)}`
+        : '—'
+    );
+  }
+
+  function renderServices(services) {
+    if (!Array.isArray(services)) {
+      services = [];
+    }
+
+    const html =
+      services.length > 0
+        ? services
+            .map(
+              (service) => `
+                <article class="service-card">
+                  <div class="service-top">
+                    <span class="service-name">
+                      ${escapeHtml(
+                        service.name || 'Unknown'
+                      )}
+                    </span>
+
+                    <i class="dot ${statusClass(
+                      service.status
+                    )}"></i>
+                  </div>
+
+                  <div class="service-message">
+                    ${escapeHtml(
+                      service.message ||
+                        'No status message.'
+                    )}
+                  </div>
+
+                  <div class="service-latency">
+                    ${
+                      service.latency == null
+                        ? '—'
+                        : `${service.latency} ms`
+                    }
+                  </div>
+                </article>
+              `
+            )
+            .join('')
+        : `<div class="empty">No service data.</div>`;
+
+    setHtml(
+      'serviceGrid',
+      html
+    );
+
+    setHtml(
+      'servicesGrid',
+      html
+    );
+  }
+
+  /*
+   * ============================================================
+   * API PROVIDERS
+   * ============================================================
+   */
+
+  function renderApis(data) {
+    const providers = Array.isArray(data)
+      ? data
+      : data?.providers ||
+        data?.apis ||
+        [];
+
+    state.apis = providers;
+
+    const enabled = providers.filter(
+      (provider) =>
+        provider.enabled !== false
+    ).length;
+
+    setText(
+      'apiSummary',
+      `${providers.length} providers · ${enabled} enabled`
+    );
+
+    if (!providers.length) {
+      setHtml(
+        'apiGrid',
+        `<div class="empty">No API provider data.</div>`
+      );
+
+      return;
+    }
+
+    setHtml(
+      'apiGrid',
+      providers
+        .map((provider) => {
+          const status =
+            firstDefined(
+              provider.health?.status,
+              provider.status,
+              'unknown'
+            );
+
+          return `
+            <article class="api-card">
+              <div class="api-category">
+                ${escapeHtml(
+                  provider.category ||
+                    'provider'
+                )}
+              </div>
+
+              <div class="api-name">
+                ${escapeHtml(
+                  provider.name ||
+                    provider.id ||
+                    'Unknown API'
+                )}
+              </div>
+
+              <div class="api-id">
+                ${escapeHtml(
+                  provider.id || '—'
+                )}
+              </div>
+
+              <div class="api-status">
+                <i class="dot ${statusClass(
+                  status
+                )}"></i>
+
+                <span>
+                  ${escapeHtml(status)}
+                </span>
+              </div>
+
+              ${
+                provider.latency != null
+                  ? `
+                    <div class="api-latency">
+                      ${escapeHtml(
+                        `${provider.latency} ms`
+                      )}
+                    </div>
+                  `
+                  : ''
+              }
+            </article>
+          `;
+        })
+        .join('')
+    );
+  }
+
+  /*
+   * ============================================================
+   * NOTIFICATIONS
+   * ============================================================
+   */
+
+  function renderNotifications(data) {
+    const items = Array.isArray(data)
+      ? data
+      : data?.notifications ||
+        data?.history ||
+        [];
+
+    state.notifications = items;
+
+    setText(
+      'notificationCount',
+      `${items.length} events`
+    );
+
+    if (!items.length) {
+      setHtml(
+        'notificationList',
+        `<div class="empty">No recent notifications.</div>`
+      );
+
+      return;
+    }
+
+    setHtml(
+      'notificationList',
+      items
+        .slice(0, 30)
+        .map((item) => {
+          const type = String(
+            item.type ||
+              item.event ||
+              'info'
+          ).toLowerCase();
+
+          const icon = type.includes('error')
+            ? '✕'
+            : type.includes('reconnect')
+              ? '↻'
+              : type.includes('login')
+                ? '↪'
+                : '●';
+
+          return `
+            <div class="notification-item">
+              <div class="notification-time">
+                ${escapeHtml(
+                  formatTime(
+                    item.timestamp ||
+                      item.createdAt ||
+                      item.time
+                  )
+                )}
+              </div>
+
+              <div class="notification-icon">
+                ${icon}
+              </div>
+
+              <div>
+                <div class="notification-title">
+                  ${escapeHtml(
+                    item.title ||
+                      item.type ||
+                      item.event ||
+                      'Notification'
+                  )}
+                </div>
+
+                <div class="notification-message">
+                  ${escapeHtml(
+                    item.message ||
+                      item.description ||
+                      ''
+                  )}
+                </div>
+              </div>
+            </div>
+          `;
+        })
+        .join('')
+    );
+  }
+
+  /*
+   * ============================================================
+   * CONFIG
+   * ============================================================
+   */
+
+  function renderConfig(config) {
+    const panel = $('configPanel');
+
+    if (!panel) {
+      return;
+    }
+
+    const environment =
+      config.environment || {};
+
+    const dashboard =
+      config.dashboard || {};
+
+    const bot =
+      config.bot || {};
+
+    const rows = [
+      ['Environment', environment.nodeEnv],
+      ['Bot', environment.botName],
+      ['Mode', environment.botMode],
+      ['Prefix', environment.prefix],
+      ['Timezone', environment.timezone],
+      ['Dashboard port', dashboard.port],
+      ['Dashboard auth', dashboard.authEnabled ? 'Enabled' : 'Disabled'],
+      ['Auto read', bot.autoRead ? 'Enabled' : 'Disabled'],
+      ['Auto typing', bot.autoTyping ? 'Enabled' : 'Disabled'],
+      ['Auto recording', bot.autoRecording ? 'Enabled' : 'Disabled'],
+      ['Group messages', bot.allowGroup ? 'Allowed' : 'Disabled'],
+      ['Private messages', bot.allowPrivate ? 'Allowed' : 'Disabled'],
+    ];
+
+    panel.innerHTML = `
+      <div class="panel-header">
+        <div>
+          <span class="eyebrow">CONFIGURATION</span>
+          <h2>Public snapshot</h2>
+        </div>
+      </div>
+
+      <div class="detail-list">
+        ${rows
+          .map(
+            ([key, value]) => `
+              <div class="detail-row">
+                <span>${escapeHtml(key)}</span>
+                <strong>${escapeHtml(
+                  formatDetail(value)
+                )}</strong>
+              </div>
+            `
+          )
+          .join('')}
+      </div>
+    `;
+  }
+
+  /*
+   * ============================================================
+   * CHART
+   * ============================================================
+   */
+
+  function drawChart(canvas, values) {
+    if (!canvas || !values.length) {
+      return;
+    }
+
+    const rect =
+      canvas.getBoundingClientRect();
+
+    const dpr =
+      window.devicePixelRatio || 1;
+
+    const width = Math.max(
+      300,
+      rect.width
+    );
+
+    const height = 170;
+
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+
+    const ctx =
+      canvas.getContext('2d');
+
+    if (!ctx) {
+      return;
+    }
+
+    ctx.setTransform(
+      dpr,
+      0,
+      0,
+      dpr,
+      0,
+      0
+    );
+
+    ctx.clearRect(
+      0,
+      0,
+      width,
+      height
+    );
+
+    const min = 0;
+    const max = 100;
+
+    if (values.length === 1) {
+      values = [
+        values[0],
+        values[0],
+      ];
+    }
+
+    ctx.beginPath();
+
+    values.forEach(
+      (value, index) => {
+        const x =
+          (index /
+            (values.length - 1)) *
+          width;
+
+        const normalized =
+          (Number(value) - min) /
+          (max - min);
+
+        const y =
+          height -
+          Math.max(
+            0,
+            Math.min(
+              1,
+              normalized
+            )
+          ) *
+            height;
+
+        if (index === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
       }
-      state.previousOverall = status.status;
+    );
+
+    ctx.stroke();
+  }
+
+  /*
+   * ============================================================
+   * HELPERS
+   * ============================================================
+   */
+
+  function setText(id, value) {
+    const element = $(id);
+
+    if (!element) {
+      return;
+    }
+
+    element.textContent =
+      value === undefined ||
+      value === null
+        ? '—'
+        : String(value);
+  }
+
+  function setHtml(id, html) {
+    const element = $(id);
+
+    if (!element) {
+      return;
+    }
+
+    element.innerHTML = html;
+  }
+
+  function setWidth(id, value) {
+    const element = $(id);
+
+    if (!element) {
+      return;
+    }
+
+    const width = Math.min(
+      100,
+      Math.max(
+        0,
+        Number(value)
+      )
+    );
+
+    element.style.width =
+      `${width}%`;
+  }
+
+  /*
+   * ============================================================
+   * DATA LOADING
+   * ============================================================
+   */
+
+  async function loadDashboard() {
+    try {
+      /*
+       * /api/status is the authoritative snapshot.
+       */
+      const status =
+        await getJson(
+          endpoints.status
+        );
+
+      renderStatus(status);
+
+      /*
+       * Optional endpoints.
+       *
+       * If one fails, dashboard remains functional.
+       */
+
+      const results =
+        await Promise.allSettled([
+          getJson(endpoints.apis),
+          getJson(endpoints.notifications),
+        ]);
+
+      if (
+        results[0].status ===
+        'fulfilled'
+      ) {
+        renderApis(
+          results[0].value
+        );
+      }
+
+      if (
+        results[1].status ===
+        'fulfilled'
+      ) {
+        renderNotifications(
+          results[1].value
+        );
+      }
+
+      setConnection(
+        true,
+        `Telemetry connected · ${formatTime(
+          status.timestamp
+        )}`
+      );
     } catch (error) {
-      setConnection(false, 'Telemetry offline');
-      $('lastUpdate').textContent = 'Telemetry endpoint unavailable';
-      $('heroMessage').textContent =
-        'Cannot reach the dashboard API. The UI will retry automatically.';
-      toast('Dashboard API unavailable', true);
+      console.error(
+        'Dashboard telemetry failed:',
+        error
+      );
+
+      setConnection(
+        false,
+        'Telemetry disconnected'
+      );
     }
   }
 
-  function toast(message, error = false) {
-    const el = document.createElement('div');
-    el.className = 'toast';
-    el.style.borderColor = error ? 'rgba(255,107,122,.35)' : 'rgba(217,255,114,.25)';
-    el.textContent = message;
-    $('toastStack').appendChild(el);
-    setTimeout(() => el.remove(), 3500);
+  /*
+   * ============================================================
+   * INIT
+   * ============================================================
+   */
+
+  function init() {
+    loadDashboard();
+
+    window.setInterval(
+      loadDashboard,
+      POLL_MS
+    );
+
+    window.addEventListener(
+      'resize',
+      () => {
+        drawChart(
+          $('cpuChart'),
+          state.history.cpu
+        );
+
+        drawChart(
+          $('memoryChart'),
+          state.history.memory
+        );
+      }
+    );
   }
 
-  document.querySelectorAll('.nav-item').forEach((item) => {
-    item.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach((x) => x.classList.remove('active'));
-      item.classList.add('active');
-      $('sidebar').classList.remove('open');
-    });
-  });
-
-  $('refreshButton').addEventListener('click', refresh);
-  $('menuButton').addEventListener('click', () => $('sidebar').classList.toggle('open'));
-  $('pollInterval').textContent = `${POLL_MS / 1000}s`;
-
-  window.addEventListener('resize', () => {
-    drawChart($('cpuChart'), state.history.cpu);
-    drawChart($('memoryChart'), state.history.memory);
-  });
-
-  refresh();
-  setInterval(refresh, POLL_MS);
+  if (
+    document.readyState ===
+    'loading'
+  ) {
+    document.addEventListener(
+      'DOMContentLoaded',
+      init
+    );
+  } else {
+    init();
+  }
 })();
