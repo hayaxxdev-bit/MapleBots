@@ -119,7 +119,7 @@ export async function getNekos(category = 'neko', amount = 1): Promise<NekosResu
 }
 
 export async function downloadNekosAsset(url: string): Promise<Buffer> {
-  return apiClient.get<Buffer>(url, {
+  return apiClient.getBuffer(url, {
     timeoutMs: DEFAULT_TIMEOUT,
     headers: getHeaders(),
   });
