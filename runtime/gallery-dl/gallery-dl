@@ -1,0 +1,7 @@
+#!/bin/sh
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+
+export PYTHONPATH="$SCRIPT_DIR/site-packages${PYTHONPATH:+:$PYTHONPATH}"
+
+exec python3 -m gallery_dl "$@"

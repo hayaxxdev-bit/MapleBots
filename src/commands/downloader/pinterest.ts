@@ -9,6 +9,7 @@ import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
+import { galleryDlPath } from '../../utils/gallery-dl';
 import type { WASocket, WAMessage } from '@whiskeysockets/baileys';
 
 const execFileAsync = promisify(execFile);
@@ -141,7 +142,7 @@ async function getMediaLocator(
 ): Promise<{ url: string; isVideo: boolean } | null> {
   try {
     const range = isSearch ? '1-15' : '1-1';
-    const { stdout } = await execFileAsync('gallery-dl', [url, '-g', '--range', range], {
+    const { stdout } = await execFileAsync(galleryDlPath, [url, '-g', '--range', range], {
       timeout: GALLERY_DL_TIMEOUT,
       maxBuffer: 5 * 1024 * 1024,
     });
@@ -177,7 +178,7 @@ async function getMediaLocator(
 
 async function getTitleSafe(url: string): Promise<string> {
   try {
-    const { stdout } = await execFileAsync('gallery-dl', [url, '--dump-json', '--range', '1-1'], {
+    const { stdout } = await execFileAsync(galleryDlPath, [url, '--dump-json', '--range', '1-1'], {
       timeout: GALLERY_DL_TIMEOUT,
       maxBuffer: 5 * 1024 * 1024,
     });

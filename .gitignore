@@ -53,6 +53,9 @@ temp/
 tmp/
 .cache/
 
+runtime/gallery-dl/venv/
+# Bundled gallery-dl build artifacts
+runtime/gallery-dl/packages/
 
 # ============================================
 # Database
@@ -178,3 +181,6 @@ backups/
 *.backup
 *.bak
 .vercel
+
+# Bundled gallery-dl build artifacts
+runtime/gallery-dl/packages/

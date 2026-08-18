@@ -8,6 +8,7 @@ import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
+import { galleryDlPath } from '../../utils/gallery-dl';
 
 const execFileAsync = promisify(execFile);
 
@@ -193,7 +194,7 @@ async function downloadImageWithYtDlp(url: string): Promise<InstagramDownloadRes
   const cookies = COOKIES_PATH ? ['--cookies', COOKIES_PATH] : [];
 
   try {
-    await execFileAsync('gallery-dl', [url, '-D', destDir, '--no-mtime', ...cookies], {
+    await execFileAsync(galleryDlPath, [url, '-D', destDir, '--no-mtime', ...cookies], {
       timeout: YTDLP_TIMEOUT,
       maxBuffer: 10 * 1024 * 1024,
     });
