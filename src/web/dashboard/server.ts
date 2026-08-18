@@ -10,6 +10,12 @@ import { getPublicConfigSnapshot } from './dashboard-config';
 import { notificationService } from '../../infrastructure/notification/notification-service';
 import { getApiRegistrySnapshot } from '../../infrastructure/api/api-health';
 
+interface CachedHealth {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  services: ServiceHealth[];
+  timestamp: string;
+}
+
 export class WebDashboard {
   private app: Express | null = null;
   private httpServer: HttpServer | null = null;
@@ -18,11 +24,7 @@ export class WebDashboard {
   private updateInterval: NodeJS.Timeout | null = null;
   private healthInterval: NodeJS.Timeout | null = null;
 
-  private cachedHealth: {
-    status: 'healthy' | 'degraded' | 'unhealthy';
-    services: ServiceHealth[];
-    timestamp: string;
-  } = {
+  private cachedHealth: CachedHealth = {
     status: 'degraded',
     services: [],
     timestamp: new Date().toISOString(),
@@ -40,8 +42,11 @@ export class WebDashboard {
     this.io = new SocketIOServer(this.httpServer, {
       cors: {
         origin: '*',
+        methods: ['GET', 'POST'],
       },
     });
+
+    this.app.disable('x-powered-by');
 
     this.app.use(express.json());
 
@@ -54,51 +59,134 @@ export class WebDashboard {
     await new Promise<void>((resolve, reject) => {
       this.httpServer!.once('error', reject);
 
-      this.httpServer!.listen(port, () => {
+      this.httpServer!.listen(port, '0.0.0.0', () => {
         resolve();
       });
     });
 
-    logger.info(`📊 Dashboard tersedia di http://localhost:${port}`);
+    logger.info(`📊 Dashboard tersedia di port ${port}.`);
+  }
+
+  private getTelemetrySnapshot() {
+    const system = metricsTracker.getSystemInfo();
+    const bot = metricsTracker.getBotStatus();
+    const metrics = metricsTracker.getSummary();
+    const config = getPublicConfigSnapshot();
+
+    return {
+      ok: true,
+      timestamp: new Date().toISOString(),
+
+      environment: config.environment,
+
+      system,
+      bot,
+      metrics,
+
+      health: this.cachedHealth,
+
+      config,
+    };
   }
 
   private routes(): void {
     const app = this.app!;
 
-    app.get('/health/live', (_q, res) => {
+    /*
+     * Liveness
+     */
+    app.get('/health/live', (_req, res) => {
       res.json({
         ok: true,
         status: 'ok',
+        timestamp: new Date().toISOString(),
       });
     });
 
-    app.get('/api/system', (_q, res) => {
-      res.json(metricsTracker.getSystemInfo());
+    /*
+     * Unified telemetry endpoint.
+     *
+     * Frontend dashboard sebaiknya menggunakan endpoint ini
+     * sebagai sumber utama data realtime/polling.
+     */
+    app.get('/api/telemetry', (_req, res) => {
+      res.json(this.getTelemetrySnapshot());
     });
 
-    app.get('/api/bot', (_q, res) => {
-      res.json(metricsTracker.getBotStatus());
+    /*
+     * Backward-compatible status endpoint.
+     */
+    app.get('/api/status', (_req, res) => {
+      res.json(this.getTelemetrySnapshot());
     });
 
-    app.get('/api/metrics', (_q, res) => {
-      res.json(metricsTracker.getSummary());
+    /*
+     * Individual endpoints.
+     */
+    app.get('/api/system', (_req, res) => {
+      res.json({
+        ok: true,
+        ...metricsTracker.getSystemInfo(),
+        timestamp: new Date().toISOString(),
+      });
     });
 
-    app.get('/api/health', async (_q, res) => {
-      const health = await runHealthCheck();
-
-      this.cachedHealth = health;
-
-      res.json(health);
+    app.get('/api/bot', (_req, res) => {
+      res.json({
+        ok: true,
+        ...metricsTracker.getBotStatus(),
+        timestamp: new Date().toISOString(),
+      });
     });
 
-    app.get('/api/apis', async (_q, res) => {
+    app.get('/api/metrics', (_req, res) => {
+      res.json({
+        ok: true,
+        ...metricsTracker.getSummary(),
+        timestamp: new Date().toISOString(),
+      });
+    });
+
+    /*
+     * Health
+     */
+    app.get('/api/health', async (_req, res) => {
+      try {
+        const health = await runHealthCheck();
+
+        this.cachedHealth = health;
+
+        res.json({
+          ok: true,
+          ...health,
+        });
+      } catch (error) {
+        logger.error(
+          error instanceof Error ? error : new Error(String(error)),
+          'Failed to run health check.'
+        );
+
+        res.status(500).json({
+          ok: false,
+          status: 'unhealthy',
+          services: [],
+          error: 'Failed to run health check.',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+
+    /*
+     * API providers
+     */
+    app.get('/api/apis', async (_req, res) => {
       try {
         const snapshot = await getApiRegistrySnapshot();
 
         res.json({
           ok: true,
           ...snapshot,
+          timestamp: new Date().toISOString(),
         });
       } catch (error) {
         logger.error(
@@ -114,31 +202,37 @@ export class WebDashboard {
       }
     });
 
-    app.get('/api/notifications', (_q, res) => {
-      res.json(
-        notificationService
-          .getHistory()
-          .slice(-100)
-          .reverse()
-          .map((item) => ({
-            ...item,
-            timestamp: item.timestamp.getTime(),
-          }))
-      );
-    });
+    /*
+     * Notifications
+     */
+    app.get('/api/notifications', (_req, res) => {
+      const notifications = notificationService
+        .getHistory()
+        .slice(-100)
+        .reverse()
+        .map((item) => ({
+          ...item,
+          timestamp:
+            item.timestamp instanceof Date
+              ? item.timestamp.getTime()
+              : new Date(item.timestamp).getTime(),
+        }));
 
-    app.get('/api/config', (_q, res) => {
-      res.json(getPublicConfigSnapshot());
-    });
-
-    app.get('/api/status', (_q, res) => {
       res.json({
         ok: true,
-        bot: metricsTracker.getBotStatus(),
-        system: metricsTracker.getSystemInfo(),
-        health: this.cachedHealth,
-        metrics: metricsTracker.getSummary(),
-        config: getPublicConfigSnapshot(),
+        notifications,
+        count: notifications.length,
+        timestamp: new Date().toISOString(),
+      });
+    });
+
+    /*
+     * Public configuration.
+     */
+    app.get('/api/config', (_req, res) => {
+      res.json({
+        ok: true,
+        ...getPublicConfigSnapshot(),
         timestamp: new Date().toISOString(),
       });
     });
@@ -153,6 +247,14 @@ export class WebDashboard {
         '📊 Dashboard client connected.'
       );
 
+      /*
+       * Send complete state immediately.
+       */
+      socket.emit('telemetry', this.getTelemetrySnapshot());
+
+      /*
+       * Backward compatibility with existing frontend.
+       */
       socket.emit('initial-data', {
         system: metricsTracker.getSystemInfo(),
         bot: metricsTracker.getBotStatus(),
@@ -173,29 +275,60 @@ export class WebDashboard {
   }
 
   private intervals(): void {
+    /*
+     * Realtime telemetry.
+     */
     this.updateInterval = setInterval(() => {
       if (!this.io) {
         return;
       }
 
-      this.io.emit('system-update', metricsTracker.getSystemInfo());
+      const telemetry = this.getTelemetrySnapshot();
 
-      this.io.emit('bot-update', metricsTracker.getBotStatus());
+      /*
+       * New unified event.
+       */
+      this.io.emit('telemetry', telemetry);
 
-      this.io.emit('metrics-update', metricsTracker.getSummary());
+      /*
+       * Existing events kept for compatibility.
+       */
+      this.io.emit('system-update', telemetry.system);
+      this.io.emit('bot-update', telemetry.bot);
+      this.io.emit('metrics-update', telemetry.metrics);
     }, 2000);
 
+    /*
+     * Health check.
+     */
     this.healthInterval = setInterval(() => {
-      void runHealthCheck().then((health) => {
+      void runHealthCheck()
+        .then((health) => {
+          this.cachedHealth = health;
+
+          this.io?.emit('health-update', health);
+        })
+        .catch((error) => {
+          logger.error(
+            error instanceof Error ? error : new Error(String(error)),
+            'Dashboard health check failed.'
+          );
+        });
+    }, 30_000);
+
+    /*
+     * Initial health check.
+     */
+    void runHealthCheck()
+      .then((health) => {
         this.cachedHealth = health;
-
-        this.io?.emit('health-update', health);
+      })
+      .catch((error) => {
+        logger.error(
+          error instanceof Error ? error : new Error(String(error)),
+          'Initial dashboard health check failed.'
+        );
       });
-    }, 30000);
-
-    void runHealthCheck().then((health) => {
-      this.cachedHealth = health;
-    });
   }
 
   async stop(): Promise<void> {
