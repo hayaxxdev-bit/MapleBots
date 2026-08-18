@@ -249,7 +249,7 @@ export class NotificationService {
     if (whatsappUser?.id) {
       const whatsappNumber = whatsappUser.id.split(':')[0];
 
-      sections.push('👤 *Account*', whatsappUser.name! ?? whatsappNumber, whatsappNumber!, '');
+      sections.push('👤 *Account*', whatsappUser.name ?? whatsappNumber!, whatsappNumber!, '');
     }
 
     sections.push(
@@ -261,7 +261,7 @@ export class NotificationService {
       ''
     );
 
-    if (details?.startupTimeMs != null) {
+    if (details?.startupTimeMs !== undefined && details?.startupTimeMs !== null) {
       sections.push('⏱️ *Startup*', `${details.startupTimeMs}ms`, '');
     }
 
@@ -286,7 +286,7 @@ export class NotificationService {
       );
     }
 
-    if (details?.featuresEnabled != null) {
+    if (details?.featuresEnabled !== undefined && details?.featuresEnabled !== null) {
       sections.push('🧩 *Features*', `${details.featuresEnabled} enabled`, '');
     }
 
@@ -430,6 +430,7 @@ export class NotificationService {
 
     await this.send(payload);
   }
+
   async sendCrashNotification(error: Error): Promise<void> {
     const payload: NotificationPayload = {
       type: NotificationType.CRASH,

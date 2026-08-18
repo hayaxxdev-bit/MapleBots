@@ -34,26 +34,18 @@ export const jikanProvider: ApiProvider = {
 
   category: 'anime',
 
-  enabled: config.useJikanApi,
-
-  configured: Boolean(config.jikanBaseUrl),
-
-  baseUrl: config.jikanBaseUrl,
-
-  timeoutMs: config.jikanTimeout,
-
-  priority: 100,
+  // Mengganti properti `enabled` menjadi method `isEnabled()`
+  isEnabled(): boolean {
+    return Boolean(config.useJikanApi);
+  },
 
   async healthCheck() {
     const startedAt = Date.now();
 
     try {
-      await apiClient.get<JikanSearchResponse>(
-        `${config.jikanBaseUrl}/anime?q=naruto&limit=1`,
-        {
-          timeoutMs: config.jikanTimeout,
-        },
-      );
+      await apiClient.get<JikanSearchResponse>(`${config.jikanBaseUrl}/anime?q=naruto&limit=1`, {
+        timeoutMs: config.jikanTimeout,
+      });
 
       return {
         status: 'healthy',
@@ -65,25 +57,20 @@ export const jikanProvider: ApiProvider = {
       return {
         status: 'unhealthy',
         latencyMs: Date.now() - startedAt,
-        message:
-          error instanceof Error
-            ? error.message
-            : String(error),
+        message: error instanceof Error ? error.message : String(error),
         checkedAt: new Date(),
       };
     }
   },
 
-  async request<T>(
-    endpoint: string,
-    options?: RequestInit & {
-      timeoutMs?: number;
-      headers?: Record<string, string>;
-    },
-  ): Promise<T> {
-    return apiClient.get<T>(
-      `${config.jikanBaseUrl}${endpoint}`,
-      options,
-    );
+  async request<T>(endpoint: string, options?: unknown): Promise<T> {
+    const requestOptions = options as
+      | (RequestInit & {
+          timeoutMs?: number;
+          headers?: Record<string, string>;
+        })
+      | undefined;
+
+    return apiClient.get<T>(`${config.jikanBaseUrl}${endpoint}`, requestOptions);
   },
 };

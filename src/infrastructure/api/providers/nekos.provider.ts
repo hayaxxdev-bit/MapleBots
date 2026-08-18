@@ -4,8 +4,7 @@ import type { ApiProvider } from '../api-types';
 import { apiClient } from '../api-client';
 import { config } from '../../../config/config';
 
-const BASE_URL =
-  'https://nekos.best/api/v2';
+const BASE_URL = 'https://nekos.best/api/v2';
 
 const DEFAULT_TIMEOUT = 15_000;
 
@@ -13,8 +12,7 @@ export interface NekosEndpoint {
   format: string;
 }
 
-export type NekosEndpoints =
-  Record<string, NekosEndpoint>;
+export type NekosEndpoints = Record<string, NekosEndpoint>;
 
 export interface NekosResult {
   url: string;
@@ -33,19 +31,16 @@ export interface NekosResponse {
 }
 
 function getUserAgent(): string {
-  const userAgent =
-    process.env['NEKOS_USER_AGENT']?.trim();
+  const userAgent = process.env['NEKOS_USER_AGENT']?.trim();
 
   if (!userAgent) {
-    throw new Error(
-      'NEKOS_USER_AGENT is not configured.',
-    );
+    throw new Error('NEKOS_USER_AGENT is not configured.');
   }
 
   return userAgent;
 }
 
-function headers(): Record<string, string> {
+function getHeaders(): Record<string, string> {
   return {
     'User-Agent': getUserAgent(),
   };
@@ -58,104 +53,74 @@ export const nekosProvider: ApiProvider = {
 
   category: 'image',
 
-  enabled: config.features.nekos,
-
-  configured: Boolean(
-    process.env['NEKOS_USER_AGENT']?.trim(),
-  ),
-
-  baseUrl: BASE_URL,
-
-  timeoutMs: DEFAULT_TIMEOUT,
-
-  priority: 80,
+  isEnabled(): boolean {
+    return Boolean(config.features['nekos']);
+  },
 
   async healthCheck() {
     const startedAt = Date.now();
 
     try {
-      await apiClient.get<NekosEndpoints>(
-        `${BASE_URL}/endpoints`,
-        {
-          timeoutMs: DEFAULT_TIMEOUT,
-          headers: headers(),
-        },
-      );
+      await apiClient.get<NekosEndpoints>(`${BASE_URL}/endpoints`, {
+        timeoutMs: DEFAULT_TIMEOUT,
+        headers: getHeaders(),
+      });
 
       return {
         status: 'healthy',
-        latencyMs:
-          Date.now() - startedAt,
-        message:
-          'Nekos.best API is reachable.',
+        latencyMs: Date.now() - startedAt,
+        message: 'Nekos.best API is reachable.',
         checkedAt: new Date(),
       };
     } catch (error) {
       return {
         status: 'unhealthy',
-        latencyMs:
-          Date.now() - startedAt,
-        message:
-          error instanceof Error
-            ? error.message
-            : String(error),
+        latencyMs: Date.now() - startedAt,
+        message: error instanceof Error ? error.message : String(error),
         checkedAt: new Date(),
       };
     }
   },
 
-  async request<T>(
-    endpoint: string,
-    options: RequestInit & {
-      timeoutMs?: number;
-      headers?: Record<string, string>;
-    } = {},
-  ): Promise<T> {
-    return apiClient.get<T>(
-      `${BASE_URL}${endpoint}`,
-      {
-        ...options,
-        headers: {
-          ...headers(),
-          ...options.headers,
-        },
+  async request<T>(endpoint: string, options?: unknown): Promise<T> {
+    const requestOptions = options as
+      | (RequestInit & {
+          timeoutMs?: number;
+          headers?: Record<string, string>;
+        })
+      | undefined;
+
+    return apiClient.get<T>(`${BASE_URL}${endpoint}`, {
+      ...requestOptions,
+      headers: {
+        ...getHeaders(),
+        ...requestOptions?.headers,
       },
-    );
+    });
   },
 };
 
 export async function getNekosEndpoints(): Promise<NekosEndpoints> {
-  return nekosProvider.request<NekosEndpoints>(
-    '/endpoints',
-  );
+  return nekosProvider.request<NekosEndpoints>('/endpoints');
 }
 
-export async function getNekos(
-  category = 'neko',
-  amount = 1,
-): Promise<NekosResult[]> {
-  const safeAmount = Math.max(
-    1,
-    Math.min(20, amount),
-  );
+export async function getNekos(category = 'neko', amount = 1): Promise<NekosResult[]> {
+  const safeAmount = Math.max(1, Math.min(20, amount));
 
   const params = new URLSearchParams({
     amount: String(safeAmount),
   });
 
-  const response =
-    await nekosProvider.request<NekosResponse>(
-      `/${encodeURIComponent(category)}?${params.toString()}`,
-    );
+  const response = await nekosProvider.request<NekosResponse>(
+    `/${encodeURIComponent(category)}?${params.toString()}`
+  );
 
   return response.results ?? [];
 }
 
-export async function downloadNekosAsset(
-  url: string,
-): Promise<Buffer> {
-  return apiClient.getBuffer(url, {
+export async function downloadNekosAsset(url: string): Promise<Buffer> {
+  return apiClient.get<Buffer>(url, {
     timeoutMs: DEFAULT_TIMEOUT,
-    headers: headers(),
+    headers: getHeaders(),
   });
 }

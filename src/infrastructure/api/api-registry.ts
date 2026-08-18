@@ -16,9 +16,7 @@ class ApiRegistry {
     }
 
     if (config.id && config.id !== provider.id) {
-      throw new Error(
-        `API provider config id mismatch: ${config.id} !== ${provider.id}`,
-      );
+      throw new Error(`API provider config id mismatch: ${config.id} !== ${provider.id}`);
     }
 
     this.providers.set(provider.id, {
@@ -43,13 +41,17 @@ class ApiRegistry {
 
   get(id: string): ApiProvider {
     const entry = this.providers.get(id);
-    if (!entry) throw new Error(`API provider not found: ${id}`);
+    if (!entry) {
+      throw new Error(`API provider not found: ${id}`);
+    }
     return entry.provider;
   }
 
   getEntry(id: string): ApiRegistryEntry {
     const entry = this.providers.get(id);
-    if (!entry) throw new Error(`API provider not found: ${id}`);
+    if (!entry) {
+      throw new Error(`API provider not found: ${id}`);
+    }
     return entry;
   }
 
@@ -88,9 +90,7 @@ class ApiRegistry {
     return this.providers.size;
   }
 
- createSnapshot(
-    statuses: readonly ApiProviderStatus[] = [],
-  ): ApiRegistrySnapshot {
+  createSnapshot(statuses: readonly ApiProviderStatus[] = []): ApiRegistrySnapshot {
     const statusMap = new Map(statuses.map((status) => [status.id, status]));
     const providers: ApiProviderStatus[] = this.getEntries().map(({ provider, config }) => {
       const existing = statusMap.get(provider.id);
@@ -104,7 +104,7 @@ class ApiRegistry {
           category: config.category ?? provider.category,
           enabled,
           configured,
-          status: (enabled ? 'unknown' : 'disabled'),
+          status: enabled ? ('unknown' as const) : ('disabled' as const),
           endpoint: config.baseUrl,
           priority: config.priority,
           requiresApiKey: config.requiresApiKey,

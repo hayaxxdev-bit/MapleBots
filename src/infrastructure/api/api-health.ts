@@ -1,6 +1,5 @@
 import { apiRegistry } from './api-registry';
 import {
-  type ApiHealth,
   type ApiHealthResult,
   type ApiProviderStatus,
   type ApiRegistrySnapshot,

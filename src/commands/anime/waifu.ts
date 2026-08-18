@@ -41,18 +41,14 @@ export const waifuCommand: Command = {
 
   handler: async (ctx) => {
     if (!config.features['waifu']) {
-      await ctx.reply(
-        '❌ Fitur waifu sedang dinonaktifkan.',
-      );
+      await ctx.reply('❌ Fitur waifu sedang dinonaktifkan.');
       return;
     }
 
     const tag = ctx.args.join(' ').trim();
 
     try {
-      await ctx.reply(
-        '🖼️ Mencari waifu...',
-      );
+      await ctx.reply('🖼️ Mencari waifu...');
 
       const params = new URLSearchParams();
 
@@ -60,55 +56,37 @@ export const waifuCommand: Command = {
       params.set('IsNsfw', 'False');
 
       if (tag) {
-        params.set(
-          'IncludedTags',
-          tag,
-        );
+        params.set('IncludedTags', tag);
       }
 
-      const endpoint =
-        `${WAIFU_API}/images?${params.toString()}`;
+      const endpoint = `${WAIFU_API}/images?${params.toString()}`;
 
       const response = await fetch(endpoint);
 
       if (!response.ok) {
-        throw new Error(
-          `Waifu.im returned HTTP ${response.status}`,
-        );
+        throw new Error(`Waifu.im returned HTTP ${response.status}`);
       }
 
-      const data =
-        (await response.json()) as WaifuApiResponse;
+      const data = (await response.json()) as WaifuApiResponse;
 
       const image = data.items?.[0];
 
       if (!image?.url) {
         await ctx.reply(
-          tag
-            ? `❌ Tidak ada waifu dengan tag *${tag}*.`
-            : '❌ Tidak ada gambar waifu ditemukan.',
+          tag ? `❌ Tidak ada waifu dengan tag *${tag}*.` : '❌ Tidak ada gambar waifu ditemukan.'
         );
         return;
       }
 
-      const imageResponse = await fetch(
-        image.url,
-      );
+      const imageResponse = await fetch(image.url);
 
       if (!imageResponse.ok) {
-        throw new Error(
-          `Failed to download image: HTTP ${imageResponse.status}`,
-        );
+        throw new Error(`Failed to download image: HTTP ${imageResponse.status}`);
       }
 
-      const buffer = Buffer.from(
-        await imageResponse.arrayBuffer(),
-      );
+      const buffer = Buffer.from(await imageResponse.arrayBuffer());
 
-      const tags =
-        image.tags
-          ?.map((item) => item.name)
-          .join(', ') || 'Unknown';
+      const tags = image.tags?.map((item) => item.name).join(', ') || 'Unknown';
 
       const caption = [
         '🌸 *Waifu.im*',
@@ -116,29 +94,18 @@ export const waifuCommand: Command = {
         `🆔 ID: ${image.id}`,
         `🏷️ Tags: ${tags}`,
         `📐 Size: ${image.width ?? '?'} × ${image.height ?? '?'}`,
-        image.artist?.name
-          ? `🎨 Artist: ${image.artist.name}`
-          : '',
+        image.artist?.name ? `🎨 Artist: ${image.artist.name}` : '',
         '',
         '🍁 MapleBot',
       ]
         .filter(Boolean)
         .join('\n');
 
-      await ctx.replyMedia(
-        buffer,
-        'image',
-        caption,
-      );
+      await ctx.replyMedia(buffer, 'image', caption);
     } catch (error) {
-      logHelper.error(
-        'waifu-command',
-        error,
-      );
+      logHelper.error('waifu-command', error);
 
-      await ctx.reply(
-        '❌ Gagal mendapatkan gambar dari Waifu.im.',
-      );
+      await ctx.reply('❌ Gagal mendapatkan gambar dari Waifu.im.');
     }
   },
 };

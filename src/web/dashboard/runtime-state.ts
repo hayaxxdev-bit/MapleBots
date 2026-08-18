@@ -6,15 +6,11 @@ import { botStats } from '../../platforms/whatsapp/connection';
 import { notificationService } from '../../infrastructure/notification/notification-service';
 import { logger } from '@/utils/logger';
 
-
 // ============================================================
 // TYPES
 // ============================================================
 
-export type DashboardConnectionState =
-  | 'connecting'
-  | 'open'
-  | 'close';
+export type DashboardConnectionState = 'connecting' | 'open' | 'close';
 
 export interface DashboardBotStatus {
   connected: boolean;
@@ -121,7 +117,6 @@ export interface DashboardMetrics {
   notificationCount: number;
 }
 
-
 // ============================================================
 // WHATSAPP RUNTIME STATE
 // ============================================================
@@ -129,11 +124,7 @@ export interface DashboardMetrics {
 export interface WhatsAppRuntimeState {
   connected: boolean;
 
-  connection:
-    | 'open'
-    | 'connecting'
-    | 'close'
-    | 'unknown';
+  connection: 'open' | 'connecting' | 'close' | 'unknown';
 
   connectedAt: string | null;
 
@@ -164,13 +155,11 @@ const whatsappState: WhatsAppRuntimeState = {
   lastDisconnectCode: null,
 };
 
-
 // ============================================================
 // BOT INSTANCE
 // ============================================================
 
 let currentBot: BotInstance | null = null;
-
 
 /**
  * Set the active WhatsApp bot instance.
@@ -178,12 +167,9 @@ let currentBot: BotInstance | null = null;
  * The dashboard stores the reference but does NOT access the
  * socket directly for status information.
  */
-export function setDashboardBot(
-  bot: BotInstance | null,
-): void {
+export function setDashboardBot(bot: BotInstance | null): void {
   currentBot = bot;
 }
-
 
 /**
  * Get the active dashboard bot instance.
@@ -194,14 +180,11 @@ export function getDashboardBot(): BotInstance | null {
   return currentBot;
 }
 
-
 // ============================================================
 // WHATSAPP RUNTIME API
 // ============================================================
 
-export function setWhatsAppRuntime(
-  patch: Partial<WhatsAppRuntimeState>,
-): void {
+export function setWhatsAppRuntime(patch: Partial<WhatsAppRuntimeState>): void {
   Object.assign(whatsappState, patch);
 
   if (patch.user) {
@@ -211,7 +194,6 @@ export function setWhatsAppRuntime(
     };
   }
 }
-
 
 export function getWhatsAppRuntime(): WhatsAppRuntimeState {
   return {
@@ -223,7 +205,6 @@ export function getWhatsAppRuntime(): WhatsAppRuntimeState {
   };
 }
 
-
 // ============================================================
 // MESSAGE RATE
 // ============================================================
@@ -232,7 +213,6 @@ let lastMessageCount = 0;
 let lastMessageSampleAt = Date.now();
 
 let messagesPerMinute = 0;
-
 
 // ============================================================
 // CPU SAMPLING
@@ -243,7 +223,6 @@ let previousCpuUsage = process.cpuUsage();
 let previousCpuSampleAt = process.hrtime.bigint();
 
 let cpuUsagePercent = 0;
-
 
 // ============================================================
 // BOT STATUS
@@ -264,33 +243,20 @@ export function getBotStatus(): DashboardBotStatus {
 
   updateMessageRate();
 
-  const connection = normalizeConnectionState(
-    runtime.connection,
-  );
+  const connection = normalizeConnectionState(runtime.connection);
 
-  const connected =
-    runtime.connected &&
-    connection === 'open';
+  const connected = runtime.connected && connection === 'open';
 
   const errorRate =
-    botStats.messagesProcessed > 0
-      ? (
-          botStats.errors /
-          botStats.messagesProcessed
-        ) * 100
-      : 0;
+    botStats.messagesProcessed > 0 ? (botStats.errors / botStats.messagesProcessed) * 100 : 0;
 
   let uptime = 0;
 
   if (connected && runtime.connectedAt) {
-    const connectedTimestamp =
-      Date.parse(runtime.connectedAt);
+    const connectedTimestamp = Date.parse(runtime.connectedAt);
 
     if (!Number.isNaN(connectedTimestamp)) {
-      uptime = Math.max(
-        0,
-        Date.now() - connectedTimestamp,
-      );
+      uptime = Math.max(0, Date.now() - connectedTimestamp);
     }
   }
 
@@ -299,52 +265,31 @@ export function getBotStatus(): DashboardBotStatus {
 
     connection,
 
-    messagesProcessed:
-      botStats.messagesProcessed,
+    messagesProcessed: botStats.messagesProcessed,
 
-    commandsExecuted:
-      botStats.commandsExecuted,
+    commandsExecuted: botStats.commandsExecuted,
 
-    errors:
-      botStats.errors,
+    errors: botStats.errors,
 
-    reconnectAttempts:
-      runtime.reconnectAttempts,
+    reconnectAttempts: runtime.reconnectAttempts,
 
-    connectedAt:
-      connected
-        ? runtime.connectedAt
-        : null,
+    connectedAt: connected ? runtime.connectedAt : null,
 
     uptime,
 
-    uptimeFormatted:
-      formatDuration(uptime),
+    uptimeFormatted: formatDuration(uptime),
 
-    messagesPerMinute:
-      Number(
-        messagesPerMinute.toFixed(2),
-      ),
+    messagesPerMinute: Number(messagesPerMinute.toFixed(2)),
 
-    errorRate:
-      Number(
-        errorRate.toFixed(2),
-      ),
+    errorRate: Number(errorRate.toFixed(2)),
 
     user: {
-      id:
-        connected
-          ? runtime.user.id
-          : null,
+      id: connected ? runtime.user.id : null,
 
-      name:
-        connected
-          ? runtime.user.name
-          : null,
+      name: connected ? runtime.user.name : null,
     },
   };
 }
-
 
 // ============================================================
 // SYSTEM STATUS
@@ -353,156 +298,98 @@ export function getBotStatus(): DashboardBotStatus {
 export function getSystemStatus(): DashboardSystemStatus {
   updateCpuUsage();
 
-  const totalMemory =
-    os.totalmem();
+  const totalMemory = os.totalmem();
 
-  const freeMemory =
-    os.freemem();
+  const freeMemory = os.freemem();
 
-  const usedMemory =
-    totalMemory - freeMemory;
+  const usedMemory = totalMemory - freeMemory;
 
-  const memoryUsagePercent =
-    totalMemory > 0
-      ? (usedMemory / totalMemory) * 100
-      : 0;
+  const memoryUsagePercent = totalMemory > 0 ? (usedMemory / totalMemory) * 100 : 0;
 
-  const load =
-    os.loadavg();
+  const load = os.loadavg();
 
-  const cpuCores =
-    Math.max(os.cpus().length, 1);
+  const cpuCores = Math.max(os.cpus().length, 1);
 
-  const processMemory =
-    process.memoryUsage();
+  const processMemory = process.memoryUsage();
 
-  const processUptime =
-    process.uptime();
+  const processUptime = process.uptime();
 
   return {
-    platform:
-      os.platform(),
+    platform: os.platform(),
 
-    arch:
-      os.arch(),
+    arch: os.arch(),
 
-    hostname:
-      os.hostname(),
+    hostname: os.hostname(),
 
     cpu: {
-      cores:
-        cpuCores,
+      cores: cpuCores,
 
-      usage:
-        Number(
-          cpuUsagePercent.toFixed(2),
-        ),
+      usage: Number(cpuUsagePercent.toFixed(2)),
 
-      usagePercent:
-        Number(
-          cpuUsagePercent.toFixed(2),
-        ),
+      usagePercent: Number(cpuUsagePercent.toFixed(2)),
 
       loadAverage: {
-        oneMinute:
-          Number(
-            (load[0] ?? 0).toFixed(2),
-          ),
+        oneMinute: Number((load[0] ?? 0).toFixed(2)),
 
-        fiveMinutes:
-          Number(
-            (load[1] ?? 0).toFixed(2),
-          ),
+        fiveMinutes: Number((load[1] ?? 0).toFixed(2)),
 
-        fifteenMinutes:
-          Number(
-            (load[2] ?? 0).toFixed(2),
-          ),
+        fifteenMinutes: Number((load[2] ?? 0).toFixed(2)),
       },
     },
 
     memory: {
-      total:
-        totalMemory,
+      total: totalMemory,
 
-      used:
-        usedMemory,
+      used: usedMemory,
 
-      free:
-        freeMemory,
+      free: freeMemory,
 
-      usagePercent:
-        Number(
-          memoryUsagePercent.toFixed(2),
-        ),
+      usagePercent: Number(memoryUsagePercent.toFixed(2)),
 
-      totalMB:
-        toMB(totalMemory),
+      totalMB: toMB(totalMemory),
 
-      usedMB:
-        toMB(usedMemory),
+      usedMB: toMB(usedMemory),
 
-      freeMB:
-        toMB(freeMemory),
+      freeMB: toMB(freeMemory),
 
-      totalGB:
-        toGB(totalMemory),
+      totalGB: toGB(totalMemory),
 
-      usedGB:
-        toGB(usedMemory),
+      usedGB: toGB(usedMemory),
 
-      freeGB:
-        toGB(freeMemory),
+      freeGB: toGB(freeMemory),
     },
 
     node: {
-      version:
-        process.version,
+      version: process.version,
 
-      uptime:
-        processUptime,
+      uptime: processUptime,
 
-      uptimeFormatted:
-        formatDuration(
-          processUptime * 1_000,
-        ),
+      uptimeFormatted: formatDuration(processUptime * 1_000),
     },
 
     process: {
-      pid:
-        process.pid,
+      pid: process.pid,
 
-      uptime:
-        processUptime,
+      uptime: processUptime,
 
-      uptimeFormatted:
-        formatDuration(
-          processUptime * 1_000,
-        ),
+      uptimeFormatted: formatDuration(processUptime * 1_000),
 
       memory: {
-        rss:
-          processMemory.rss,
+        rss: processMemory.rss,
 
-        heapUsed:
-          processMemory.heapUsed,
+        heapUsed: processMemory.heapUsed,
 
-        heapTotal:
-          processMemory.heapTotal,
+        heapTotal: processMemory.heapTotal,
 
-        rssMB:
-          toMB(processMemory.rss),
+        rssMB: toMB(processMemory.rss),
 
-        heapUsedMB:
-          toMB(processMemory.heapUsed),
+        heapUsedMB: toMB(processMemory.heapUsed),
 
-        heapTotalMB:
-          toMB(processMemory.heapTotal),
+        heapTotalMB: toMB(processMemory.heapTotal),
       },
     },
   };
 }
-
 
 // ============================================================
 // HEALTH
@@ -524,36 +411,27 @@ export async function getHealthStatus(): Promise<DashboardHealthStatus> {
   // ----------------------------------------------------------
 
   try {
-    const runtime =
-      getWhatsAppRuntime();
+    const runtime = getWhatsAppRuntime();
 
-    if (
-      runtime.connected &&
-      runtime.connection === 'open'
-    ) {
+    if (runtime.connected && runtime.connection === 'open') {
       services.push({
         name: 'WhatsApp',
         status: 'healthy',
-        message:
-          'WhatsApp connection is active.',
+        message: 'WhatsApp connection is active.',
         latency: 0,
       });
-    } else if (
-      runtime.connection === 'connecting'
-    ) {
+    } else if (runtime.connection === 'connecting') {
       services.push({
         name: 'WhatsApp',
         status: 'degraded',
-        message:
-          'WhatsApp is connecting.',
+        message: 'WhatsApp is connecting.',
         latency: 0,
       });
     } else {
       services.push({
         name: 'WhatsApp',
         status: 'unhealthy',
-        message:
-          'WhatsApp connection is not active.',
+        message: 'WhatsApp connection is not active.',
         latency: 0,
       });
     }
@@ -562,51 +440,43 @@ export async function getHealthStatus(): Promise<DashboardHealthStatus> {
       {
         error,
       },
-      'Failed to collect WhatsApp dashboard health.',
+      'Failed to collect WhatsApp dashboard health.'
     );
 
     services.push({
       name: 'WhatsApp',
       status: 'unhealthy',
-      message:
-        'Unable to read WhatsApp runtime state.',
+      message: 'Unable to read WhatsApp runtime state.',
       latency: 0,
     });
   }
-
 
   // ----------------------------------------------------------
   // Notification
   // ----------------------------------------------------------
 
   try {
-    const history =
-      notificationService.getHistory();
+    const history = notificationService.getHistory();
 
     services.push({
       name: 'Notification',
       status: 'healthy',
-      message:
-        `Notification service is active. ${history.length} notification(s) recorded.`,
+      message: `Notification service is active. ${history.length} notification(s) recorded.`,
       latency: 0,
     });
   } catch (error) {
     logger.error(
-      error instanceof Error
-        ? error
-        : new Error(String(error)),
-      'Notification health check failed.',
+      error instanceof Error ? error : new Error(String(error)),
+      'Notification health check failed.'
     );
 
     services.push({
       name: 'Notification',
       status: 'unhealthy',
-      message:
-        'Notification service is unavailable.',
+      message: 'Notification service is unavailable.',
       latency: 0,
     });
   }
-
 
   // ----------------------------------------------------------
   // Node.js
@@ -615,82 +485,52 @@ export async function getHealthStatus(): Promise<DashboardHealthStatus> {
   services.push({
     name: 'Node.js',
     status: 'healthy',
-    message:
-      `Running ${process.version}.`,
+    message: `Running ${process.version}.`,
     latency: 0,
   });
-
 
   // ----------------------------------------------------------
   // Overall status
   // ----------------------------------------------------------
 
-  let status:
-    | 'healthy'
-    | 'degraded'
-    | 'unhealthy' = 'healthy';
+  let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
 
-  if (
-    services.some(
-      (service) =>
-        service.status === 'unhealthy',
-    )
-  ) {
+  if (services.some((service) => service.status === 'unhealthy')) {
     status = 'unhealthy';
-  } else if (
-    services.some(
-      (service) =>
-        service.status === 'degraded',
-    )
-  ) {
+  } else if (services.some((service) => service.status === 'degraded')) {
     status = 'degraded';
   }
 
-  return {
+  return Promise.resolve({
     status,
-
     services,
-
-    timestamp:
-      new Date().toISOString(),
-  };
+    timestamp: new Date().toISOString(),
+  });
 }
-
 
 // ============================================================
 // METRICS
 // ============================================================
 
 export function getMetrics(): DashboardMetrics {
-  const bot =
-    getBotStatus();
+  const bot = getBotStatus();
 
   return {
-    messagesProcessed:
-      bot.messagesProcessed,
+    messagesProcessed: bot.messagesProcessed,
 
-    commandsExecuted:
-      bot.commandsExecuted,
+    commandsExecuted: bot.commandsExecuted,
 
-    errors:
-      bot.errors,
+    errors: bot.errors,
 
-    errorRate:
-      bot.errorRate,
+    errorRate: bot.errorRate,
 
-    messagesPerMinute:
-      bot.messagesPerMinute,
+    messagesPerMinute: bot.messagesPerMinute,
 
-    reconnectAttempts:
-      bot.reconnectAttempts,
+    reconnectAttempts: bot.reconnectAttempts,
 
-    notificationCount:
-      notificationService
-        .getHistory()
-        .length,
+    notificationCount: notificationService.getHistory().length,
   };
 }
-
 
 // ============================================================
 // NOTIFICATIONS
@@ -700,114 +540,67 @@ export function getNotificationHistory() {
   return notificationService.getHistory();
 }
 
-
 // ============================================================
 // CPU
 // ============================================================
 
 function updateCpuUsage(): void {
-  const now =
-    process.hrtime.bigint();
+  const now = process.hrtime.bigint();
 
-  const elapsedNanoseconds =
-    Number(
-      now - previousCpuSampleAt,
-    );
+  const elapsedNanoseconds = Number(now - previousCpuSampleAt);
 
   if (elapsedNanoseconds <= 0) {
     return;
   }
 
-  const currentCpuUsage =
-    process.cpuUsage();
+  const currentCpuUsage = process.cpuUsage();
 
-  const userDifference =
-    currentCpuUsage.user -
-    previousCpuUsage.user;
+  const userDifference = currentCpuUsage.user - previousCpuUsage.user;
 
-  const systemDifference =
-    currentCpuUsage.system -
-    previousCpuUsage.system;
+  const systemDifference = currentCpuUsage.system - previousCpuUsage.system;
 
-  const cpuTimeMicros =
-    userDifference +
-    systemDifference;
+  const cpuTimeMicros = userDifference + systemDifference;
 
-  const elapsedMicros =
-    elapsedNanoseconds / 1_000;
+  const elapsedMicros = elapsedNanoseconds / 1_000;
 
-  const cpuCount =
-    Math.max(
-      os.cpus().length,
-      1,
-    );
+  const cpuCount = Math.max(os.cpus().length, 1);
 
-  cpuUsagePercent =
-    Math.min(
-      100,
-      Math.max(
-        0,
-        (
-          cpuTimeMicros /
-          elapsedMicros /
-          cpuCount
-        ) * 100,
-      ),
-    );
+  cpuUsagePercent = Math.min(100, Math.max(0, (cpuTimeMicros / elapsedMicros / cpuCount) * 100));
 
-  previousCpuUsage =
-    currentCpuUsage;
+  previousCpuUsage = currentCpuUsage;
 
-  previousCpuSampleAt =
-    now;
+  previousCpuSampleAt = now;
 }
-
 
 // ============================================================
 // MESSAGE RATE
 // ============================================================
 
 function updateMessageRate(): void {
-  const now =
-    Date.now();
+  const now = Date.now();
 
-  const elapsed =
-    now - lastMessageSampleAt;
+  const elapsed = now - lastMessageSampleAt;
 
   if (elapsed < 5_000) {
     return;
   }
 
-  const current =
-    botStats.messagesProcessed;
+  const current = botStats.messagesProcessed;
 
-  const difference =
-    Math.max(
-      0,
-      current - lastMessageCount,
-    );
+  const difference = Math.max(0, current - lastMessageCount);
 
-  messagesPerMinute =
-    difference /
-    (elapsed / 60_000);
+  messagesPerMinute = difference / (elapsed / 60_000);
 
-  lastMessageCount =
-    current;
+  lastMessageCount = current;
 
-  lastMessageSampleAt =
-    now;
+  lastMessageSampleAt = now;
 }
-
 
 // ============================================================
 // HELPERS
 // ============================================================
 
-function normalizeConnectionState(
-  connection:
-    | string
-    | undefined,
-): DashboardConnectionState {
+function normalizeConnectionState(connection: string | undefined): DashboardConnectionState {
   switch (connection) {
     case 'open':
       return 'open';
@@ -824,68 +617,26 @@ function normalizeConnectionState(
   }
 }
 
-
-function toMB(
-  bytes: number,
-): number {
-  return Number(
-    (
-      bytes /
-      1024 /
-      1024
-    ).toFixed(2),
-  );
+function toMB(bytes: number): number {
+  return Number((bytes / 1024 / 1024).toFixed(2));
 }
 
-
-function toGB(
-  bytes: number,
-): number {
-  return Number(
-    (
-      bytes /
-      1024 /
-      1024 /
-      1024
-    ).toFixed(2),
-  );
+function toGB(bytes: number): number {
+  return Number((bytes / 1024 / 1024 / 1024).toFixed(2));
 }
 
+function formatDuration(milliseconds: number): string {
+  const safeMilliseconds = Math.max(0, milliseconds);
 
-function formatDuration(
-  milliseconds: number,
-): string {
-  const safeMilliseconds =
-    Math.max(
-      0,
-      milliseconds,
-    );
+  const seconds = Math.floor(safeMilliseconds / 1_000);
 
-  const seconds =
-    Math.floor(
-      safeMilliseconds /
-      1_000,
-    );
+  const days = Math.floor(seconds / 86_400);
 
-  const days =
-    Math.floor(
-      seconds / 86_400,
-    );
+  const hours = Math.floor((seconds % 86_400) / 3_600);
 
-  const hours =
-    Math.floor(
-      (seconds % 86_400) /
-      3_600,
-    );
+  const minutes = Math.floor((seconds % 3_600) / 60);
 
-  const minutes =
-    Math.floor(
-      (seconds % 3_600) /
-      60,
-    );
-
-  const remainingSeconds =
-    seconds % 60;
+  const remainingSeconds = seconds % 60;
 
   if (days > 0) {
     return `${days}d ${hours}h ${minutes}m`;

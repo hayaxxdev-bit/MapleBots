@@ -9,10 +9,7 @@ import {
   type NekosResult,
 } from '../../infrastructure/api/providers/nekos.provider';
 
-import {
-  gifToMp4,
-  convertToMp4,
-} from '../../infrastructure/media/media-converter';
+import { gifToMp4, convertToMp4 } from '../../infrastructure/media/media-converter';
 
 export const nekosCommand: Command = {
   name: 'nekos',
@@ -29,67 +26,50 @@ export const nekosCommand: Command = {
 
   handler: async (ctx) => {
     if (!config.features['nekos']) {
-      await ctx.reply(
-        '❌ Fitur nekos sedang dinonaktifkan.',
-      );
+      await ctx.reply('❌ Fitur nekos sedang dinonaktifkan.');
 
       return;
     }
 
     try {
-      const requestedCategory =
-        ctx.args[0]?.toLowerCase();
+      const requestedCategory = ctx.args[0]?.toLowerCase();
 
-      const category =
-        requestedCategory ?? 'neko';
+      const category = requestedCategory ?? 'neko';
 
       /*
        * Discover categories directly
        * from Nekos.best.
        */
-      const endpoints =
-        await getNekosEndpoints();
+      const endpoints = await getNekosEndpoints();
 
-      const endpoint =
-        endpoints[category];
+      const endpoint = endpoints[category];
 
       /*
        * Validate category.
        */
       if (!endpoint) {
-        const categories =
-          Object.keys(endpoints);
+        const categories = Object.keys(endpoints);
 
         await ctx.reply(
-          [
-            '❌ Kategori tidak valid.',
-            '',
-            '📂 Kategori tersedia:',
-            categories.join(', '),
-          ].join('\n'),
+          ['❌ Kategori tidak valid.', '', '📂 Kategori tersedia:', categories.join(', ')].join(
+            '\n'
+          )
         );
 
         return;
       }
 
-      await ctx.reply(
-        `🔍 Mencari ${category}...`,
-      );
+      await ctx.reply(`🔍 Mencari ${category}...`);
 
       /*
        * Request one random asset.
        */
-      const results =
-        await getNekos(category, 1);
+      const results = await getNekos(category, 1);
 
-      const result:
-        | NekosResult
-        | undefined = results[0];
+      const result: NekosResult | undefined = results[0];
 
       if (!result) {
-        await ctx.reply(
-          '❌ Tidak ada media ditemukan.',
-        );
+        await ctx.reply('❌ Tidak ada media ditemukan.');
 
         return;
       }
@@ -97,13 +77,9 @@ export const nekosCommand: Command = {
       /*
        * Download asset.
        */
-      const buffer =
-        await downloadNekosAsset(
-          result.url,
-        );
+      const buffer = await downloadNekosAsset(result.url);
 
-      const format =
-        endpoint.format.toLowerCase();
+      const format = endpoint.format.toLowerCase();
 
       /*
        * Build caption.
@@ -113,17 +89,10 @@ export const nekosCommand: Command = {
         '',
         `📁 Category: ${category}`,
         `📦 Format: ${format}`,
-        result.anime_name
-          ? `🎭 Anime: ${result.anime_name}`
-          : null,
-        result.artist_name
-          ? `🎨 Artist: ${result.artist_name}`
-          : null,
+        result.anime_name ? `🎭 Anime: ${result.anime_name}` : null,
+        result.artist_name ? `🎨 Artist: ${result.artist_name}` : null,
       ]
-        .filter(
-          (value): value is string =>
-            value !== null,
-        )
+        .filter((value): value is string => value !== null)
         .join('\n');
 
       /*
@@ -134,13 +103,9 @@ export const nekosCommand: Command = {
        * then send it with gifPlayback enabled.
        */
       if (format === 'gif') {
-        const mp4Buffer =
-          await gifToMp4(buffer);
+        const mp4Buffer = await gifToMp4(buffer);
 
-        await ctx.replyGif(
-          mp4Buffer,
-          caption,
-        );
+        await ctx.replyGif(mp4Buffer, caption);
 
         return;
       }
@@ -150,23 +115,10 @@ export const nekosCommand: Command = {
        *
        * WhatsApp transport uses MP4.
        */
-      if (
-        format === 'mp4' ||
-        format === 'webm' ||
-        format === 'mov'
-      ) {
-        const videoBuffer =
-          format === 'mp4'
-            ? buffer
-            : await convertToMp4(
-                buffer,
-                format,
-              );
+      if (format === 'mp4' || format === 'webm' || format === 'mov') {
+        const videoBuffer = format === 'mp4' ? buffer : await convertToMp4(buffer, format);
 
-        await ctx.replyVideo(
-          videoBuffer,
-          caption,
-        );
+        await ctx.replyVideo(videoBuffer, caption);
 
         return;
       }
@@ -174,19 +126,11 @@ export const nekosCommand: Command = {
       /*
        * PNG/JPG/WebP/etc.
        */
-      await ctx.replyImage(
-        buffer,
-        caption,
-      );
+      await ctx.replyImage(buffer, caption);
     } catch (error) {
-      logHelper.error(
-        'nekos-command',
-        error,
-      );
+      logHelper.error('nekos-command', error);
 
-      await ctx.reply(
-        '❌ Gagal mendapatkan media dari Nekos.best.',
-      );
+      await ctx.reply('❌ Gagal mendapatkan media dari Nekos.best.');
     }
   },
 };

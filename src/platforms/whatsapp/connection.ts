@@ -125,7 +125,7 @@ function calculateUptime(): number {
   return Date.now() - connectedAt.getTime();
 }
 
-async function createSocket(state: AuthenticationState): Promise<WASocket> {
+function createSocket(state: AuthenticationState): WASocket {
   logger.info('📱 Creating WhatsApp socket...');
 
   return makeWASocket({
@@ -229,40 +229,44 @@ function setupEventHandlers(
 
   heartbeatCleanup = setupHeartbeat(sock);
 
-  sock.ev.on('creds.update', async (update) => {
-    try {
-      await saveCreds(update);
+  sock.ev.on('creds.update', (update) => {
+    void (async () => {
+      try {
+        await saveCreds(update);
 
-      if (config.logLevel === 'debug') {
-        logger.debug('WhatsApp credentials updated.');
+        if (config.logLevel === 'debug') {
+          logger.debug('WhatsApp credentials updated.');
+        }
+      } catch (error: unknown) {
+        botStats.errors++;
+
+        logHelper.error('whatsapp:save-creds', error);
       }
-    } catch (error: unknown) {
-      botStats.errors++;
-
-      logHelper.error('whatsapp:save-creds', error);
-    }
+    })();
   });
 
   sock.ev.on('connection.update', (update) => {
     void handleConnectionUpdate(sock, update, connect);
   });
 
-  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+  sock.ev.on('messages.upsert', ({ messages, type }) => {
     if (type !== 'notify') {
       return;
     }
 
-    for (const message of messages) {
-      try {
-        await handleIncomingMessage(sock, message);
+    void (async () => {
+      for (const message of messages) {
+        try {
+          await handleIncomingMessage(sock, message);
 
-        botStats.messagesProcessed++;
-      } catch (error: unknown) {
-        botStats.errors++;
+          botStats.messagesProcessed++;
+        } catch (error: unknown) {
+          botStats.errors++;
 
-        logHelper.error('whatsapp:message', error);
+          logHelper.error('whatsapp:message', error);
+        }
       }
-    }
+    })();
   });
 
   sock.ev.on('messages.update', (updates) => {
@@ -377,9 +381,6 @@ async function handleConnectionUpdate(
   /**
    * Connected
    */
-  /**
-   * Connected
-   */
   if (connection === 'open') {
     currentSocket = sock;
 
@@ -474,31 +475,16 @@ async function handleConnectionUpdate(
     try {
       await notificationService.sendBotOnlineNotification(calculateUptime(), packageVersion, {
         whatsappUser: {
-          id: sock.user?.id ?? null,
-          name: sock.user?.name ?? null,
+          id: sock.user?.id ?? '',
+          name: sock.user?.name ?? undefined,
         },
-
-        connectedAt: connectedAt.toISOString(),
-
-        process: {
-          pid: process.pid,
-          nodeVersion: process.version,
-          platform: process.platform,
-          architecture: process.arch,
-        },
-
-        dashboard: {
-          enabled: process.env['WEB_DASHBOARD_ENABLED'] !== 'false',
-          port: config.webDashboardPort,
-          url: `http://localhost:${config.webDashboardPort}`,
-        },
-
+        pid: process.pid,
+        nodeVersion: process.version,
+        platform: process.platform,
+        architecture: process.arch,
+        dashboardUrl: `http://localhost:${config.webDashboardPort}`,
         apiProviders: apiSummary,
-
-        features: {
-          enabled: featuresEnabled,
-          total: Object.keys(config.features).length,
-        },
+        featuresEnabled,
       });
     } catch (error: unknown) {
       logHelper.error('notification:bot-online', error);
@@ -506,6 +492,7 @@ async function handleConnectionUpdate(
 
     return;
   }
+
   /**
    * Connection closed
    */
@@ -595,7 +582,7 @@ async function handleConnectionUpdate(
        * If creating the new socket itself
        * fails, schedule another attempt.
        */
-      scheduleReconnect(connect);
+      void scheduleReconnect(connect);
     }
   }, statusCode);
 }
@@ -641,20 +628,21 @@ export async function startBot(): Promise<BotInstance> {
    * Creating the socket should not depend
    * on an external version request.
    */
-  const connect = async (): Promise<void> => {
+  const connect = (): Promise<void> => {
     if (stopping) {
-      return;
+      return Promise.resolve();
     }
 
-    const sock = await createSocket(state);
+    const sock = createSocket(state);
 
     currentSocket = sock;
 
     setupEventHandlers(sock, saveCreds, connect);
 
     logger.info('📡 WhatsApp socket initialized.');
-  };
 
+    return Promise.resolve();
+  };
   await connect();
 
   return {

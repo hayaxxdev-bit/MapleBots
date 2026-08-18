@@ -101,7 +101,10 @@ export class DatabaseBackupManager {
       // Send error notification
       await notificationService.sendErrorNotification(
         result.error ?? new Error('Unknown database backup error'),
-        'Database Backup'
+        {
+          module: 'database-backup',
+          action: 'Database Backup',
+        }
       );
 
       return result;
@@ -127,7 +130,10 @@ export class DatabaseBackupManager {
             logger.error(error, 'Scheduled backup failed:');
             await notificationService.sendErrorNotification(
               error instanceof Error ? error : new Error(String(error)),
-              'Scheduled Database Backup'
+              {
+                module: 'database-backup',
+                action: 'Scheduled Database Backup',
+              }
             );
           }
         })();

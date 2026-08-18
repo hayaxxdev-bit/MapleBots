@@ -57,8 +57,10 @@ export const jikanCommand: Command = {
         '',
         anime.title_english ? `🇬🇧 ${anime.title_english}` : null,
         anime.title_japanese ? `🇯🇵 ${anime.title_japanese}` : null,
-        anime.score != null ? `⭐ Score: ${anime.score}` : null,
-        anime.episodes != null ? `📺 Episodes: ${anime.episodes}` : null,
+        anime.score !== null && anime.score !== undefined ? `⭐ Score: ${anime.score}` : null,
+        anime.episodes !== null && anime.episodes !== undefined
+          ? `📺 Episodes: ${anime.episodes}`
+          : null,
         anime.status ? `📡 Status: ${anime.status}` : null,
         '',
         anime.synopsis ? anime.synopsis.slice(0, 700) : 'Tidak ada synopsis.',

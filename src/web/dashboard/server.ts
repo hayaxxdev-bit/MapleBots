@@ -3,7 +3,6 @@ import { createServer, type Server as HttpServer } from 'node:http';
 import { Server as SocketIOServer } from 'socket.io';
 import path from 'node:path';
 
-import { config } from '../../config/config';
 import { logger } from '../../infrastructure/logging/logger';
 import { metricsTracker } from './metrics-tracker';
 import { runHealthCheck, type ServiceHealth } from './health-checker';

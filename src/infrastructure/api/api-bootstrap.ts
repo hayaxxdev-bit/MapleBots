@@ -1,8 +1,5 @@
 import { apiRegistry } from './api-registry';
-import type {
-  ApiProvider,
-  ApiProviderConfig,
-} from './api-types';
+import type { ApiProvider, ApiProviderConfig } from './api-types';
 
 let initialized = false;
 
@@ -13,16 +10,12 @@ const providers: Array<{
 
 export function registerApiProvider(
   provider: ApiProvider,
-  providerConfig: ApiProviderConfig = {},
+  providerConfig: ApiProviderConfig = {}
 ): void {
-  const existing = providers.some(
-    (entry) => entry.provider.id === provider.id,
-  );
+  const existing = providers.some((entry) => entry.provider.id === provider.id);
 
   if (existing) {
-    throw new Error(
-      `API provider already queued for registration: ${provider.id}`,
-    );
+    throw new Error(`API provider already queued for registration: ${provider.id}`);
   }
 
   providers.push({
@@ -51,27 +44,17 @@ export function registerApiProviders(): void {
 
       id: provider.id,
 
-      name:
-        providerConfig.name ??
-        provider.name,
+      name: providerConfig.name ?? provider.name,
 
-      category:
-        providerConfig.category ??
-        provider.category,
+      category: providerConfig.category ?? provider.category,
 
-      enabled:
-        providerConfig.enabled ??
-        provider.isEnabled(),
+      enabled: providerConfig.enabled ?? provider.isEnabled(),
 
-      configured:
-        providerConfig.configured ??
-        true,
+      configured: providerConfig.configured ?? true,
     });
   }
 }
 
 export function getRegisteredApiProviders(): readonly ApiProvider[] {
-  return providers.map(
-    ({ provider }) => provider,
-  );
+  return providers.map(({ provider }) => provider);
 }

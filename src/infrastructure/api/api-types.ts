@@ -11,12 +11,7 @@ export type ApiCategory =
   | 'game'
   | 'other';
 
-export type ApiHealthStatus =
-  | 'unknown'
-  | 'healthy'
-  | 'degraded'
-  | 'unhealthy'
-  | 'disabled';
+export type ApiHealthStatus = 'unknown' | 'healthy' | 'degraded' | 'unhealthy' | 'disabled';
 
 export interface ApiHealth {
   readonly status: ApiHealthStatus;
@@ -32,10 +27,7 @@ export interface ApiProvider {
 
   isEnabled(): boolean;
 
-  request<T>(
-    operation: string,
-    payload?: unknown,
-  ): Promise<T>;
+  request<T>(operation: string, payload?: unknown): Promise<T>;
 
   healthCheck(): Promise<ApiHealth>;
 }

@@ -1,16 +1,10 @@
-import { config } from '../../config/config';
 import { logger } from '../../infrastructure/logging/logger';
 import { notificationService } from '../../infrastructure/notification/notification-service';
 import { getWhatsAppRuntime } from './runtime-state';
 
-import {
-  checkAllApiHealth,
-} from '../../infrastructure/api/api-health';
+import { checkAllApiHealth } from '../../infrastructure/api/api-health';
 
-export type HealthStatus =
-  | 'healthy'
-  | 'degraded'
-  | 'unhealthy';
+export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
 export interface ServiceHealth {
   name: string;
@@ -29,22 +23,12 @@ function elapsed(start: number): number {
   return Math.max(0, Date.now() - start);
 }
 
-function getOverallStatus(
-  services: ServiceHealth[],
-): HealthStatus {
-  if (
-    services.some(
-      (service) => service.status === 'unhealthy',
-    )
-  ) {
+function getOverallStatus(services: ServiceHealth[]): HealthStatus {
+  if (services.some((service) => service.status === 'unhealthy')) {
     return 'unhealthy';
   }
 
-  if (
-    services.some(
-      (service) => service.status === 'degraded',
-    )
-  ) {
+  if (services.some((service) => service.status === 'degraded')) {
     return 'degraded';
   }
 
@@ -58,10 +42,7 @@ function checkWhatsApp(): ServiceHealth {
   const start = Date.now();
   const runtime = getWhatsAppRuntime();
 
-  if (
-    runtime.connected &&
-    runtime.connection === 'open'
-  ) {
+  if (runtime.connected && runtime.connection === 'open') {
     return {
       name: 'WhatsApp',
       status: 'healthy',
@@ -70,9 +51,7 @@ function checkWhatsApp(): ServiceHealth {
     };
   }
 
-  if (
-    runtime.connection === 'connecting'
-  ) {
+  if (runtime.connection === 'connecting') {
     return {
       name: 'WhatsApp',
       status: 'degraded',
@@ -96,30 +75,24 @@ function checkNotification(): ServiceHealth {
   const start = Date.now();
 
   try {
-    const history =
-      notificationService.getHistory();
+    const history = notificationService.getHistory();
 
     return {
       name: 'Notification',
       status: 'healthy',
-      message:
-        `Notification service is active. ` +
-        `${history.length} notification(s) recorded.`,
+      message: `Notification service is active. ` + `${history.length} notification(s) recorded.`,
       latency: elapsed(start),
     };
   } catch (error) {
     logger.error(
-      error instanceof Error
-        ? error
-        : new Error(String(error)),
-      'Notification health check failed.',
+      error instanceof Error ? error : new Error(String(error)),
+      'Notification health check failed.'
     );
 
     return {
       name: 'Notification',
       status: 'unhealthy',
-      message:
-        'Notification service is unavailable.',
+      message: 'Notification service is unavailable.',
       latency: elapsed(start),
     };
   }
@@ -177,21 +150,16 @@ async function checkApiServices(): Promise<ServiceHealth[]> {
         status,
         message:
           health.message ??
-          (
-            health.status === 'healthy'
-              ? `${result.name} is reachable.`
-              : `${result.name} is ${health.status}.`
-          ),
-        latency:
-          health.latencyMs ?? null,
+          (health.status === 'healthy'
+            ? `${result.name} is reachable.`
+            : `${result.name} is ${health.status}.`),
+        latency: health.latencyMs ?? null,
       };
     });
   } catch (error) {
     logger.error(
-      error instanceof Error
-        ? error
-        : new Error(String(error)),
-      'API services health check failed.',
+      error instanceof Error ? error : new Error(String(error)),
+      'API services health check failed.'
     );
 
     return [
@@ -209,11 +177,7 @@ async function checkApiServices(): Promise<ServiceHealth[]> {
  * Complete application health check.
  */
 export async function runHealthCheck(): Promise<HealthReport> {
-  const services: ServiceHealth[] = [
-    checkWhatsApp(),
-    checkNotification(),
-    checkNode(),
-  ];
+  const services: ServiceHealth[] = [checkWhatsApp(), checkNotification(), checkNode()];
 
   /**
    * API providers are discovered dynamically

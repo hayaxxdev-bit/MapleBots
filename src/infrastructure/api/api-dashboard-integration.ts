@@ -27,7 +27,6 @@ export function registerApiDashboardRoutes(app: Express): void {
     const { config } = entry;
 
     res.json({
-      
       ok: true,
       provider: {
         id: entry.provider.id,
