@@ -1,1197 +1,175 @@
-<!-- public/index.html -->
 <!doctype html>
 <html lang="id">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
-    <title>MapleBot — Ops Console</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      rel="icon"
-      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍁</text></svg>"
-    />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap"
-      rel="stylesheet"
-    />
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-      :root {
-        --void: #0a0d13;
-        --panel: #10141d;
-        --panel2: #141924;
-        --line: #1f2530;
-        --soft: #171c26;
-        --text: #e9edf4;
-        --dim: #7d8797;
-        --faint: #4c5462;
-        --signal: #4fe3c1;
-        --good: #3ddc97;
-        --warn: #f5c451;
-        --bad: #ff5c72;
-        --info: #62a8ff;
-        --mono: 'IBM Plex Mono', ui-monospace, monospace;
-        --sans: 'Inter', sans-serif;
-        --radius: 10px;
-      }
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      html {
-        color-scheme: dark;
-      }
-      body {
-        min-height: 100vh;
-        padding: 28px 22px 60px;
-        background:
-          radial-gradient(1100px 520px at 12% -10%, rgba(79, 227, 193, 0.06), transparent 60%),
-          radial-gradient(900px 500px at 100% 0%, rgba(98, 168, 255, 0.05), transparent 55%),
-          var(--void);
-        color: var(--text);
-        font-family: var(--sans);
-      }
-      .wrap {
-        max-width: 1440px;
-        margin: auto;
-      }
-      .mast {
-        background: linear-gradient(180deg, var(--panel2), var(--panel));
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        padding: 22px 26px 0;
-        margin-bottom: 16px;
-        overflow: hidden;
-      }
-      .mast-top {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-      }
-      .brand-mark {
-        width: 42px;
-        height: 42px;
-        display: grid;
-        place-items: center;
-        border: 1px solid #2b6e63;
-        border-radius: 9px;
-        background: rgba(79, 227, 193, 0.08);
-        font-size: 20px;
-      }
-      .brand h1 {
-        font-size: 1.28rem;
-      }
-      .sub {
-        margin-top: 2px;
-        color: var(--faint);
-        font: 600 0.72rem var(--mono);
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-      .header-right {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-      .status-badge,
-      .small-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 7px 12px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        background: #ffffff05;
-        color: var(--dim);
-        font: 600 0.7rem var(--mono);
-        text-transform: uppercase;
-      }
-      .status-badge .dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: var(--faint);
-      }
-      .online {
-        color: var(--good);
-        border-color: #3ddc974d;
-      }
-      .online .dot {
-        background: var(--good);
-        box-shadow: 0 0 8px var(--good);
-      }
-      .offline {
-        color: var(--bad);
-        border-color: #ff5c724d;
-      }
-      .offline .dot {
-        background: var(--bad);
-        box-shadow: 0 0 8px var(--bad);
-      }
-      .connected {
-        color: var(--good);
-      }
-      .disconnected {
-        color: var(--bad);
-      }
-      .pulse {
-        height: 64px;
-        margin: 18px -26px 0;
-        border-top: 1px solid var(--soft);
-      }
-      .pulse svg {
-        width: 100%;
-        height: 100%;
-      }
-      .pulse path {
-        fill: none;
-        stroke: var(--signal);
-        stroke-width: 1.6;
-        stroke-linecap: round;
-        stroke-dasharray: 900;
-        stroke-dashoffset: 900;
-        animation: draw 3.4s linear infinite;
-      }
-      .pulse line {
-        stroke: var(--soft);
-      }
-      @keyframes draw {
-        70% {
-          stroke-dashoffset: 0;
-        }
-        100% {
-          stroke-dashoffset: -60;
-        }
-      }
-      .toolbar {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        flex-wrap: wrap;
-        padding: 10px 14px;
-        margin-bottom: 16px;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        background: #10141dcc;
-      }
-      .toolbar span {
-        font: 600 0.66rem var(--mono);
-        color: var(--dim);
-      }
-      .toolbar .label {
-        color: var(--faint);
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-      }
-      .error {
-        display: none;
-        margin-bottom: 16px;
-        padding: 12px 14px;
-        border: 1px solid #ff5c7240;
-        border-radius: var(--radius);
-        background: #ff5c7208;
-        color: var(--bad);
-        font: 0.7rem var(--mono);
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 16px;
-        margin-bottom: 16px;
-      }
-      .grid.two {
-        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-      }
-      .card {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        padding: 18px 20px 20px;
-      }
-      .head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid var(--soft);
-      }
-      .title {
-        font-size: 0.8rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: var(--dim);
-      }
-      .title b {
-        color: var(--signal);
-        margin-right: 8px;
-      }
-      .meta {
-        font: 0.64rem var(--mono);
-        color: var(--faint);
-      }
-      .stats {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-        margin-bottom: 6px;
-      }
-      .stat {
-        padding: 12px 14px;
-        border: 1px solid var(--soft);
-        border-radius: 8px;
-        background: var(--panel2);
-      }
-      .value {
-        font: 600 1.7rem var(--mono);
-      }
-      .label {
-        margin-top: 6px;
-        color: var(--faint);
-        font-size: 0.66rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-      }
-      .bar {
-        height: 5px;
-        margin-top: 10px;
-        background: var(--soft);
-        border-radius: 3px;
-        overflow: hidden;
-      }
-      .fill {
-        height: 100%;
-        width: 0;
-        border-radius: 3px;
-        transition: width 0.4s;
-      }
-      .cpu {
-        background: linear-gradient(90deg, #2b6e63, var(--signal));
-      }
-      .mem {
-        background: linear-gradient(90deg, #4a5fc9, var(--info));
-      }
-      .row {
-        display: flex;
-        justify-content: space-between;
-        gap: 14px;
-        padding: 9px 0;
-        border-bottom: 1px solid var(--soft);
-        font-size: 0.8rem;
-      }
-      .row:last-child {
-        border-bottom: 0;
-      }
-      .name {
-        color: var(--dim);
-      }
-      .val {
-        color: var(--text);
-        font: 600 0.72rem var(--mono);
-        text-align: right;
-        word-break: break-word;
-      }
-      .indicator,
-      .api-dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 8px;
-      }
-      .healthy {
-        background: var(--good);
-        box-shadow: 0 0 7px var(--good);
-      }
-      .degraded {
-        background: var(--warn);
-        box-shadow: 0 0 7px var(--warn);
-      }
-      .unhealthy {
-        background: var(--bad);
-        box-shadow: 0 0 7px var(--bad);
-      }
-      .unknown,
-      .disabled {
-        background: var(--faint);
-        box-shadow: none;
-      }
-      .chart {
-        height: 220px;
-        position: relative;
-      }
-      .notes {
-        margin-bottom: 12px;
-        color: var(--faint);
-        font: 0.66rem/1.6 var(--mono);
-      }
-      .api-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 8px;
-      }
-      .api-group {
-        margin-bottom: 16px;
-      }
-      .api-group:last-child {
-        margin-bottom: 0;
-      }
-      .api-group h4 {
-        margin-bottom: 8px;
-        color: var(--faint);
-        font: 600 0.66rem var(--mono);
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-      }
-      .api {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 12px;
-        padding: 11px 12px;
-        border: 1px solid var(--soft);
-        border-radius: 8px;
-        background: var(--panel2);
-      }
-      .api-name {
-        font-size: 0.8rem;
-        font-weight: 600;
-      }
-      .api-id {
-        margin-top: 3px;
-        color: var(--faint);
-        font: 0.6rem var(--mono);
-      }
-      .api-right {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--dim);
-        font: 0.62rem var(--mono);
-      }
-      .api-status {
-        padding: 3px 7px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        font-size: 0.56rem;
-        text-transform: uppercase;
-      }
-      .api-status.healthy {
-        color: var(--good);
-        background: none;
-        box-shadow: none;
-      }
-      .api-status.degraded {
-        color: var(--warn);
-        background: none;
-        box-shadow: none;
-      }
-      .api-status.unhealthy {
-        color: var(--bad);
-        background: none;
-        box-shadow: none;
-      }
-      .api-status.disabled,
-      .api-status.unknown {
-        color: var(--faint);
-        background: none;
-        box-shadow: none;
-      }
-      .config {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 8px;
-      }
-      .config-block {
-        padding: 12px;
-        border: 1px solid var(--soft);
-        border-radius: 8px;
-        background: var(--panel2);
-      }
-      .config-block h4 {
-        margin-bottom: 8px;
-        color: var(--dim);
-        font-size: 0.7rem;
-        text-transform: uppercase;
-      }
-      .config-line {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 5px 0;
-        color: var(--faint);
-        font: 0.62rem var(--mono);
-      }
-      .config-line span:last-child {
-        color: var(--text);
-        text-align: right;
-      }
-      .notifications {
-        max-height: 360px;
-        overflow: auto;
-      }
-      .notification {
-        display: grid;
-        grid-template-columns: 66px 1fr;
-        gap: 12px;
-        padding: 11px 12px;
-        margin-bottom: 6px;
-        border-left: 3px solid var(--info);
-        border-radius: 7px;
-        background: var(--panel2);
-      }
-      .notification.critical {
-        border-left-color: var(--bad);
-      }
-      .notification.high {
-        border-left-color: var(--warn);
-      }
-      .notification.low {
-        border-left-color: var(--good);
-      }
-      .notification .time {
-        font: 0.66rem var(--mono);
-        color: var(--faint);
-      }
-      .notification .ntitle {
-        font-size: 0.82rem;
-        font-weight: 600;
-      }
-      .notification .msg {
-        margin-top: 2px;
-        color: var(--dim);
-        font-size: 0.76rem;
-        line-height: 1.4;
-      }
-      .empty {
-        padding: 18px 4px;
-        color: var(--faint);
-        font: 0.76rem var(--mono);
-      }
-      footer {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        margin-top: 16px;
-        color: var(--faint);
-        font: 0.62rem var(--mono);
-      }
-      code {
-        font-family: var(--mono);
-        color: var(--signal);
-      }
-      @media (max-width: 760px) {
-        body {
-          padding: 18px 12px 40px;
-        }
-        .mast {
-          padding: 18px 16px 0;
-        }
-        .pulse {
-          margin: 16px -16px 0;
-          height: 50px;
-        }
-        .grid.two {
-          grid-template-columns: 1fr;
-        }
-        .stats {
-          gap: 8px;
-        }
-        .value {
-          font-size: 1.35rem;
-        }
-        .api {
-          grid-template-columns: 1fr;
-        }
-        .api-right {
-          justify-content: flex-start;
-        }
-        .notification {
-          grid-template-columns: 1fr;
-        }
-        footer {
-          flex-direction: column;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <header class="mast">
-        <div class="mast-top">
-          <div class="brand">
-            <div class="brand-mark">🍁</div>
-            <div>
-              <h1>MapleBot</h1>
-              <div class="sub">Ops Console · Realtime Telemetry</div>
-            </div>
-          </div>
-          <div class="header-right">
-            <span id="socketBadge" class="small-badge disconnected">Dashboard Socket</span>
-            <span id="botBadge" class="status-badge offline"
-              ><span class="dot"></span>Connecting…</span
-            >
-          </div>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b0f14">
+  <meta name="description" content="MapleBot Operations Console">
+  <title>MapleBot · Ops Console</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">🍁</div>
+        <div>
+          <strong>MapleBot</strong>
+          <span>Ops Console</span>
         </div>
-        <div class="pulse">
-          <svg viewBox="0 0 900 64" preserveAspectRatio="none">
-            <line x1="0" y1="16" x2="900" y2="16" stroke-dasharray="2 6"></line>
-            <line x1="0" y1="32" x2="900" y2="32" stroke-dasharray="2 6"></line>
-            <line x1="0" y1="48" x2="900" y2="48" stroke-dasharray="2 6"></line>
-            <path
-              d="M0,32 L140,32 L165,32 L178,10 L192,54 L206,32 L230,32 L500,32 L525,32 L538,14 L552,50 L566,32 L590,32 L900,32"
-            ></path>
-          </svg>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-item active" href="#overview" data-section="overview">
+          <span>⌂</span><span>Overview</span>
+        </a>
+        <a class="nav-item" href="#services" data-section="services">
+          <span>◉</span><span>Services</span>
+        </a>
+        <a class="nav-item" href="#apis" data-section="apis">
+          <span>⌘</span><span>API Providers</span>
+        </a>
+        <a class="nav-item" href="#runtime" data-section="runtime">
+          <span>▣</span><span>Runtime</span>
+        </a>
+        <a class="nav-item" href="#notifications" data-section="notifications">
+          <span>♢</span><span>Notifications</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="connection-pill" id="connectionPill">
+          <i></i>
+          <span id="connectionText">Connecting</span>
+        </div>
+        <button class="ghost-button" id="refreshButton" type="button">↻ Refresh</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-button mobile-only" id="menuButton" type="button" aria-label="Open menu">☰</button>
+        <div>
+          <div class="eyebrow">OPERATIONS / REALTIME TELEMETRY</div>
+          <h1>Dashboard</h1>
+        </div>
+        <div class="topbar-actions">
+          <div class="live-indicator"><i></i> LIVE</div>
+          <div class="last-update" id="lastUpdate">Waiting for telemetry…</div>
         </div>
       </header>
 
-      <div id="errorBox" class="error"></div>
-
-      <div class="toolbar">
-        <div><span class="label">Telemetry</span> <span id="lastUpdate">waiting…</span></div>
-        <div><span id="envBadge">ENV —</span> <span id="nameBadge">BOT —</span></div>
-      </div>
-
-      <section class="grid">
-        <article class="card">
-          <div class="head">
-            <span class="title"><b>◆</b>System</span><span id="load" class="meta">load —</span>
-          </div>
-          <div class="stats">
-            <div class="stat">
-              <div id="cpu" class="value">—</div>
-              <div class="label">CPU Usage</div>
-              <div class="bar"><div id="cpuBar" class="fill cpu"></div></div>
+      <section id="overview" class="page-section">
+        <div class="hero-grid">
+          <article class="hero-card">
+            <div class="hero-copy">
+              <span class="status-badge" id="overallBadge">CHECKING</span>
+              <h2 id="heroTitle">MapleBot Operations</h2>
+              <p id="heroMessage">Connecting to the application telemetry endpoint.</p>
             </div>
-            <div class="stat">
-              <div id="memory" class="value">—</div>
-              <div class="label">Memory Usage</div>
-              <div class="bar"><div id="memoryBar" class="fill mem"></div></div>
+            <div class="hero-meta">
+              <div><span>ENVIRONMENT</span><strong id="envValue">—</strong></div>
+              <div><span>MODE</span><strong id="modeValue">—</strong></div>
+              <div><span>BOT</span><strong id="botValue">—</strong></div>
             </div>
-          </div>
-          <div class="row">
-            <span class="name">Platform</span><span id="platform" class="val">—</span>
-          </div>
-          <div class="row">
-            <span class="name">CPU Cores</span><span id="cores" class="val">—</span>
-          </div>
-          <div class="row">
-            <span class="name">Hostname</span><span id="hostname" class="val">—</span>
-          </div>
-          <div class="row"><span class="name">Node</span><span id="node" class="val">—</span></div>
-          <div class="row">
-            <span class="name">System Uptime</span><span id="systemUptime" class="val">—</span>
-          </div>
-        </article>
+          </article>
 
-        <article class="card">
-          <div class="head">
-            <span class="title"><b>◆</b>Bot Status</span
-            ><span id="connection" class="meta">unknown</span>
-          </div>
-          <div class="stats">
-            <div class="stat">
-              <div id="messages" class="value">0</div>
-              <div class="label">Messages Processed</div>
-            </div>
-            <div class="stat">
-              <div id="commands" class="value">0</div>
-              <div class="label">Commands Executed</div>
-            </div>
-          </div>
-          <div class="row">
-            <span class="name">Uptime</span><span id="botUptime" class="val">—</span>
-          </div>
-          <div class="row">
-            <span class="name">Connected At</span><span id="connectedAt" class="val">—</span>
-          </div>
-          <div class="row">
-            <span class="name">Messages / Min</span><span id="mpm" class="val">0</span>
-          </div>
-          <div class="row">
-            <span class="name">Error Rate</span><span id="errorRate" class="val">0%</span>
-          </div>
-          <div class="row">
-            <span class="name">Reconnect Attempts</span><span id="reconnect" class="val">0</span>
-          </div>
-          <div class="row">
-            <span class="name">WhatsApp User</span><span id="waUser" class="val">—</span>
-          </div>
-        </article>
+          <article class="metric-card">
+            <div class="metric-label">CPU USAGE</div>
+            <div class="metric-value" id="cpuValue">—</div>
+            <div class="meter"><span id="cpuBar"></span></div>
+            <div class="metric-foot"><span>System load</span><strong id="loadValue">—</strong></div>
+          </article>
 
-        <article class="card">
-          <div class="head">
-            <span class="title"><b>◆</b>Health</span
-            ><span id="healthOverall" class="meta">unknown</span>
+          <article class="metric-card">
+            <div class="metric-label">MEMORY</div>
+            <div class="metric-value" id="memoryValue">—</div>
+            <div class="meter"><span id="memoryBar"></span></div>
+            <div class="metric-foot"><span>RSS</span><strong id="rssValue">—</strong></div>
+          </article>
+
+          <article class="metric-card">
+            <div class="metric-label">MESSAGES</div>
+            <div class="metric-value" id="messagesValue">0</div>
+            <div class="metric-foot"><span>Processed</span><strong id="commandsValue">0 cmds</strong></div>
+          </article>
+        </div>
+
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">HEALTH</span>
+            <h2>Service health</h2>
           </div>
-          <div id="health"><div class="empty">loading services…</div></div>
-        </article>
+          <span class="muted" id="healthTimestamp">—</span>
+        </div>
+        <div class="service-grid" id="serviceGrid"></div>
+
+        <div class="two-column">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <span class="eyebrow">TELEMETRY</span>
+                <h2>CPU history</h2>
+              </div>
+              <span class="panel-value" id="cpuHistoryValue">—</span>
+            </div>
+            <canvas id="cpuChart" height="170"></canvas>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <span class="eyebrow">TELEMETRY</span>
+                <h2>Memory history</h2>
+              </div>
+              <span class="panel-value" id="memoryHistoryValue">—</span>
+            </div>
+            <canvas id="memoryChart" height="170"></canvas>
+          </article>
+        </div>
       </section>
 
-      <section class="grid">
-        <article class="card">
-          <div class="head">
-            <span class="title"><b>◆</b>Node Process</span>
-          </div>
-          <div class="stats">
-            <div class="stat">
-              <div id="rss" class="value">—</div>
-              <div class="label">RSS</div>
-            </div>
-            <div class="stat">
-              <div id="heap" class="value">—</div>
-              <div class="label">Heap Used</div>
-            </div>
-          </div>
-          <div class="row"><span class="name">PID</span><span id="pid" class="val">—</span></div>
-          <div class="row">
-            <span class="name">Process Uptime</span><span id="processUptime" class="val">—</span>
-          </div>
-          <div class="row">
-            <span class="name">Heap Total</span><span id="heapTotal" class="val">—</span>
-          </div>
-          <div class="row">
-            <span class="name">External</span><span id="external" class="val">—</span>
-          </div>
-        </article>
-
-        <article class="card">
-          <div class="head">
-            <span class="title"><b>◆</b>Runtime Metrics</span>
-          </div>
-          <div class="row">
-            <span class="name">Messages</span><span id="mMessages" class="val">0</span>
-          </div>
-          <div class="row">
-            <span class="name">Commands</span><span id="mCommands" class="val">0</span>
-          </div>
-          <div class="row">
-            <span class="name">Errors</span><span id="mErrors" class="val">0</span>
-          </div>
-          <div class="row">
-            <span class="name">Error Rate</span><span id="mErrorRate" class="val">0%</span>
-          </div>
-          <div class="row">
-            <span class="name">Notifications</span><span id="mNotifications" class="val">0</span>
-          </div>
-          <div class="row"><span class="name">CPU</span><span id="mCpu" class="val">—</span></div>
-          <div class="row">
-            <span class="name">Memory</span><span id="mMemory" class="val">—</span>
-          </div>
-        </article>
+      <section id="services" class="page-section">
+        <div class="section-heading">
+          <div><span class="eyebrow">RUNTIME</span><h2>Services</h2></div>
+        </div>
+        <div class="service-grid" id="servicesGrid"></div>
       </section>
 
-      <section class="card" style="margin-bottom: 16px">
-        <div class="head">
-          <span class="title"><b>◆</b>API Services</span
-          ><span id="apiSummary" class="meta">0 providers</span>
+      <section id="apis" class="page-section">
+        <div class="section-heading">
+          <div><span class="eyebrow">INTEGRATIONS</span><h2>API Providers</h2></div>
+          <span class="muted" id="apiSummary">—</span>
         </div>
-        <div class="notes">
-          Dynamic provider list. The dashboard first tries <code>/api/apis</code>. If that endpoint
-          does not exist yet, it falls back to the API configuration exposed by
-          <code>/api/status</code>. Adding providers later does not require changing this HTML.
-        </div>
-        <div id="apis"><div class="empty">loading API providers…</div></div>
+        <div class="api-grid" id="apiGrid"></div>
       </section>
 
-      <section class="card" style="margin-bottom: 16px">
-        <div class="head">
-          <span class="title"><b>◆</b>Configuration</span><span class="meta">public snapshot</span>
+      <section id="runtime" class="page-section">
+        <div class="section-heading">
+          <div><span class="eyebrow">PROCESS</span><h2>Runtime details</h2></div>
         </div>
-        <div id="config"><div class="empty">loading configuration…</div></div>
+        <div class="runtime-grid">
+          <article class="panel detail-panel" id="runtimePanel"></article>
+          <article class="panel detail-panel" id="configPanel"></article>
+        </div>
       </section>
 
-      <section class="grid two">
-        <article class="card">
-          <div class="head">
-            <span class="title"><b>◆</b>CPU History</span><span class="meta">30 samples</span>
-          </div>
-          <div class="chart"><canvas id="cpuChart"></canvas></div>
-        </article>
-        <article class="card">
-          <div class="head">
-            <span class="title"><b>◆</b>Memory History</span><span class="meta">30 samples</span>
-          </div>
-          <div class="chart"><canvas id="memoryChart"></canvas></div>
-        </article>
-      </section>
-
-      <section class="card" style="margin-bottom: 16px">
-        <div class="head">
-          <span class="title"><b>◆</b>Recent Notifications</span
-          ><span id="notificationCount" class="meta">0</span>
+      <section id="notifications" class="page-section">
+        <div class="section-heading">
+          <div><span class="eyebrow">EVENTS</span><h2>Recent notifications</h2></div>
+          <span class="muted" id="notificationCount">0 events</span>
         </div>
-        <div id="notifications" class="notifications">
-          <div class="empty">no notifications yet</div>
-        </div>
+        <div class="panel notification-list" id="notificationList"></div>
       </section>
 
       <footer>
-        <span>MapleBot Ops Console</span><span id="footer">Realtime telemetry active</span>
+        <span>MapleBot Ops Console</span>
+        <span>Telemetry polling · <strong id="pollInterval">5s</strong></span>
       </footer>
-    </div>
+    </main>
+  </div>
 
-    <script>
-      'use strict';
-      const socket = io();
-      const MAX = 30,
-        labels = [],
-        cpuData = [],
-        memoryData = [];
-      const cpuChart = new Chart(document.getElementById('cpuChart'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            {
-              data: cpuData,
-              borderColor: '#4fe3c1',
-              backgroundColor: 'rgba(79,227,193,.08)',
-              pointRadius: 0,
-              borderWidth: 2,
-              tension: 0.35,
-              fill: true,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 100,
-              grid: { color: 'rgba(255,255,255,.05)' },
-              ticks: { color: '#7d8797' },
-            },
-            x: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#7d8797' } },
-          },
-          plugins: { legend: { display: false } },
-        },
-      });
-      const memoryChart = new Chart(document.getElementById('memoryChart'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            {
-              data: memoryData,
-              borderColor: '#62a8ff',
-              backgroundColor: 'rgba(98,168,255,.08)',
-              pointRadius: 0,
-              borderWidth: 2,
-              tension: 0.35,
-              fill: true,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 100,
-              grid: { color: 'rgba(255,255,255,.05)' },
-              ticks: { color: '#7d8797' },
-            },
-            x: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#7d8797' } },
-          },
-          plugins: { legend: { display: false } },
-        },
-      });
-
-      const $ = (id) => document.getElementById(id);
-      const num = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
-      const pct = (v, d = 1) => num(v).toFixed(d) + '%';
-      const esc = (v) =>
-        String(v ?? '')
-          .replaceAll('&', '&amp;')
-          .replaceAll('<', '&lt;')
-          .replaceAll('>', '&gt;')
-          .replaceAll('"', '&quot;')
-          .replaceAll("'", '&#039;');
-      const mb = (v) => num(v).toFixed(1) + ' MB';
-      const status = (s) => {
-        s = String(s ?? 'unknown').toLowerCase();
-        return ['healthy', 'ok', 'online', 'up'].includes(s)
-          ? 'healthy'
-          : ['degraded', 'warning', 'warn'].includes(s)
-            ? 'degraded'
-            : ['unhealthy', 'error', 'offline', 'down'].includes(s)
-              ? 'unhealthy'
-              : s === 'disabled'
-                ? 'disabled'
-                : 'unknown';
-      };
-      const duration = (v) => {
-        let s = Math.max(0, Math.floor(num(v) > 100000 ? num(v) / 1000 : num(v)));
-        let d = Math.floor(s / 86400);
-        let h = Math.floor((s % 86400) / 3600);
-        let m = Math.floor((s % 3600) / 60);
-        let x = s % 60;
-        return [d && d + 'd', h && h + 'h', m && m + 'm', x + 's'].filter(Boolean).join(' ');
-      };
-      const date = (v) => {
-        if (!v) return '—';
-        let d = new Date(v);
-        return Number.isNaN(d.getTime())
-          ? '—'
-          : d.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'medium' });
-      };
-
-      function updateSystem(d) {
-        if (!d) return;
-        let c = d.cpu || {},
-          m = d.memory || {},
-          n = d.node || {},
-          p = d.process || {},
-          cv = num(c.usagePercent ?? c.usage),
-          mv = num(m.usagePercent);
-        $('cpu').textContent = pct(cv);
-        $('cpuBar').style.width = Math.max(0, Math.min(100, cv)) + '%';
-        $('memory').textContent = pct(mv);
-        $('memoryBar').style.width = Math.max(0, Math.min(100, mv)) + '%';
-        $('platform').textContent = [d.platform, d.arch].filter(Boolean).join(' ') || '—';
-        $('cores').textContent = c.cores ?? '—';
-        $('hostname').textContent = d.hostname ?? '—';
-        $('node').textContent = n.version ?? '—';
-        $('systemUptime').textContent = n.uptimeFormatted || duration(n.uptime);
-        let l = c.loadAverage || {};
-        $('load').textContent =
-          'load ' + num(l.oneMinute).toFixed(2) + ' / ' + num(l.fiveMinutes).toFixed(2);
-        $('rss').textContent = p.memory?.rssMB != null ? mb(p.memory.rssMB) : '—';
-        $('heap').textContent = p.memory?.heapUsedMB != null ? mb(p.memory.heapUsedMB) : '—';
-        $('pid').textContent = p.pid ?? '—';
-        $('processUptime').textContent = p.uptimeFormatted || duration(p.uptime);
-        $('heapTotal').textContent = p.memory?.heapTotalMB != null ? mb(p.memory.heapTotalMB) : '—';
-        $('external').textContent =
-          p.memory?.external != null ? mb(p.memory.external / 1048576) : '—';
-        labels.push(new Date().toLocaleTimeString('id-ID'));
-        cpuData.push(cv);
-        memoryData.push(mv);
-        while (labels.length > MAX) {
-          labels.shift();
-          cpuData.shift();
-          memoryData.shift();
-        }
-        cpuChart.update('none');
-        memoryChart.update('none');
-        $('lastUpdate').textContent = 'updated ' + new Date().toLocaleTimeString('id-ID');
-      }
-      function updateBot(d) {
-        if (!d) return;
-        let on = d.connected === true;
-        $('messages').textContent = num(d.messagesProcessed);
-        $('commands').textContent = num(d.commandsExecuted);
-        $('botUptime').textContent = d.uptimeFormatted || duration(d.uptime);
-        $('connectedAt').textContent = date(d.connectedAt);
-        $('mpm').textContent = num(d.messagesPerMinute);
-        $('errorRate').textContent = pct(d.errorRate, 2);
-        $('reconnect').textContent = num(d.reconnectAttempts);
-        $('connection').textContent = d.connection || 'unknown';
-        let u = d.user || {};
-        $('waUser').textContent = u.name ? u.name + (u.id ? ' · ' + u.id : '') : u.id || '—';
-        $('botBadge').className = 'status-badge ' + (on ? 'online' : 'offline');
-        $('botBadge').innerHTML = '<span class="dot"></span>' + (on ? 'Online' : 'Offline');
-      }
-      function updateHealth(d) {
-        if (!d) return;
-
-        let ss = Array.isArray(d.services) ? d.services : [];
-
-        $('healthOverall').textContent = d.status || 'unknown';
-
-        $('health').innerHTML = ss.length
-          ? ss
-              .map((s) => {
-                let st = status(s.status);
-                let lat = s.latency;
-
-                return (
-                  '<div class="row"><span class="name"><span class="indicator ' +
-                  st +
-                  '"></span>' +
-                  esc(s.name || 'Unknown') +
-                  (s.message
-                    ? '<div style="margin-left:16px;color:var(--faint);font:.6rem var(--mono)">' +
-                      esc(s.message) +
-                      '</div>'
-                    : '') +
-                  '</span><span class="val">' +
-                  (Number.isFinite(Number(lat)) ? num(lat) + 'ms' : '—') +
-                  '</span></div>'
-                );
-              })
-              .join('')
-          : '<div class="empty">no services monitored</div>';
-      }
-      function updateMetrics(d) {
-        if (!d) return;
-        $('mMessages').textContent = num(d.messagesProcessed);
-        $('mCommands').textContent = num(d.commandsExecuted);
-        $('mErrors').textContent = num(d.errors);
-        $('mErrorRate').textContent = pct(d.errorRate, 2);
-        $('mNotifications').textContent = num(d.notificationCount);
-        $('mCpu').textContent = pct(d.cpuUsage);
-        $('mMemory').textContent = pct(d.memoryUsage);
-      }
-      function line(k, v) {
-        return (
-          '<div class="config-line"><span>' +
-          esc(k) +
-          '</span><span>' +
-          esc(v == null ? '—' : v) +
-          '</span></div>'
-        );
-      }
-      function bool(v) {
-        return v === true ? 'enabled' : v === false ? 'disabled' : '—';
-      }
-      function renderConfig(c) {
-        if (!c) return;
-        let e = c.environment || {},
-          b = c.bot || {},
-          d = c.dashboard || {},
-          db = c.database || {},
-          s = c.session || {},
-          p = c.performance || {},
-          sec = c.security || {},
-          n = c.notifications || {},
-          f = c.features || {};
-        $('envBadge').textContent = 'ENV ' + String(e.nodeEnv || 'unknown').toUpperCase();
-        $('nameBadge').textContent = 'BOT ' + (e.botName || 'MapleBot');
-        $('config').innerHTML =
-          '<div class="config">' +
-          '<div class="config-block"><h4>Environment</h4>' +
-          line('Node Env', e.nodeEnv) +
-          line('Bot', e.botName) +
-          line('Mode', e.botMode) +
-          line('Prefix', e.prefix) +
-          line('Timezone', e.timezone) +
-          '</div>' +
-          '<div class="config-block"><h4>Dashboard</h4>' +
-          line('Enabled', bool(d.enabled)) +
-          line('Port', d.port) +
-          line('Auth', bool(d.authEnabled)) +
-          '</div>' +
-          '<div class="config-block"><h4>Bot</h4>' +
-          line('Owner', b.owner) +
-          line('Admins', Array.isArray(b.admins) ? b.admins.length : 0) +
-          line('Auto Read', bool(b.autoRead)) +
-          line('Typing', bool(b.autoTyping)) +
-          line('Recording', bool(b.autoRecording)) +
-          '</div>' +
-          '<div class="config-block"><h4>Database</h4>' +
-          line('Type', db.type) +
-          line('Cache', db.cacheType) +
-          line('Redis', bool(db.redisConfigured)) +
-          '</div>' +
-          '<div class="config-block"><h4>Session</h4>' +
-          line('Directory', s.directory) +
-          line('Encryption', bool(s.encryptionEnabled)) +
-          line('Password', bool(s.passwordConfigured)) +
-          '</div>' +
-          '<div class="config-block"><h4>Performance</h4>' +
-          line('Max Memory', p.maxMemoryMb + ' MB') +
-          line('Workers', p.workerThreads) +
-          line('Queue', bool(p.queueEnabled)) +
-          line('Queue Size', p.maxQueueSize) +
-          '</div>' +
-          '<div class="config-block"><h4>Security</h4>' +
-          line('Rate Limit', bool(sec.rateLimitEnabled)) +
-          line('Max Requests', sec.rateLimitMax) +
-          line('Window', sec.rateLimitWindowMs + 'ms') +
-          line('Blocked', Array.isArray(sec.blockedCommands) ? sec.blockedCommands.length : 0) +
-          '</div>' +
-          '<div class="config-block"><h4>Notifications</h4>' +
-          line('Start', bool(n.onStart)) +
-          line('Stop', bool(n.onStop)) +
-          line('Reconnect', bool(n.onReconnect)) +
-          line('Login', bool(n.onLogin)) +
-          line('Error', bool(n.onError)) +
-          '</div>' +
-          '<div class="config-block"><h4>Features</h4>' +
-          Object.entries(f)
-            .map(([k, v]) => line(k, bool(v)))
-            .join('') +
-          '</div></div>';
-      }
-      function fromConfig(c) {
-        let a = [],
-          apis = c?.apis || {},
-          add = (id, name, cat, x) =>
-            x &&
-            a.push({
-              id,
-              name,
-              category: cat,
-              enabled: x.enabled !== false,
-              configured: x.configured !== false,
-              status: status(x.status),
-              latencyMs: x.latencyMs ?? null,
-            });
-        add('jikan', 'Jikan API', 'anime', apis.jikan);
-        add('trace_moe', 'Trace.moe', 'anime', apis.traceMoe);
-        (Array.isArray(apis.custom) ? apis.custom : []).forEach((x, i) =>
-          add(x.id || 'custom_' + (i + 1), x.name || 'Custom API ' + (i + 1), 'custom', x)
-        );
-        return a;
-      }
-      async function apiRegistry() {
-        try {
-          let r = await fetch('/api/apis', { cache: 'no-store' });
-          if (r.ok) {
-            let x = await r.json();
-            let a = Array.isArray(x) ? x : x.providers;
-            if (Array.isArray(a) && a.length)
-              return a.map((x) => ({ ...x, status: status(x.status ?? x.health?.status) }));
-          }
-        } catch {}
-        try {
-          let r = await fetch('/api/status', { cache: 'no-store' });
-          if (r.ok) return fromConfig((await r.json()).config);
-        } catch {}
-        return [];
-      }
-      function renderApis(a) {
-        $('apiSummary').textContent =
-          a.length + ' providers · ' + a.filter((x) => x.enabled !== false).length + ' enabled';
-        if (!a.length) {
-          $('apis').innerHTML = '<div class="empty">no API providers registered</div>';
-          return;
-        }
-        let g = {};
-        a.forEach((x) => (g[x.category || 'other'] ??= []).push(x));
-        $('apis').innerHTML = Object.entries(g)
-          .sort()
-          .map(
-            ([cat, xs]) =>
-              '<div class="api-group"><h4>' +
-              esc(cat) +
-              '</h4><div class="api-list">' +
-              xs
-                .sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id))
-                .map((x) => {
-                  let st = x.enabled === false ? 'disabled' : status(x.status ?? x.health?.status);
-                  let lat = x.latencyMs ?? x.health?.latencyMs;
-                  return (
-                    '<div class="api"><div><div class="api-name"><span class="api-dot ' +
-                    st +
-                    '"></span>' +
-                    esc(x.name || x.id) +
-                    '</div><div class="api-id">' +
-                    esc(x.id) +
-                    (x.configured === false ? ' · not configured' : '') +
-                    '</div></div><div class="api-right">' +
-                    (lat != null ? num(lat) + 'ms' : '—') +
-                    ' <span class="api-status ' +
-                    st +
-                    '">' +
-                    st +
-                    '</span></div></div>'
-                  );
-                })
-                .join('') +
-              '</div></div>'
-          )
-          .join('');
-      }
-      async function refreshApis() {
-        renderApis(await apiRegistry());
-      }
-      async function refreshNotifications() {
-        try {
-          let r = await fetch('/api/notifications', { cache: 'no-store' });
-          if (!r.ok) return;
-          let a = await r.json();
-          $('notifications').innerHTML =
-            Array.isArray(a) && a.length
-              ? a
-                  .slice(0, 30)
-                  .map((x) => {
-                    let d = x.timestamp ? new Date(x.timestamp) : null;
-                    let t =
-                      d && !Number.isNaN(d.getTime()) ? d.toLocaleTimeString('id-ID') : '--:--';
-                    let pr = String(x.priority || 'medium').toLowerCase();
-                    return (
-                      '<div class="notification ' +
-                      esc(pr) +
-                      '"><span class="time">' +
-                      t +
-                      '</span><span><div class="ntitle">' +
-                      esc(x.title || 'Notification') +
-                      '</div><div class="msg">' +
-                      esc(x.message || '') +
-                      '</div></span></div>'
-                    );
-                  })
-                  .join('')
-              : '<div class="empty">no notifications</div>';
-        } catch (e) {
-          console.warn(e);
-        }
-      }
-      async function bootstrap() {
-        try {
-          let r = await fetch('/api/status', { cache: 'no-store' });
-          if (!r.ok) throw Error('HTTP ' + r.status);
-          let x = await r.json();
-          updateSystem(x.system);
-          updateBot(x.bot);
-          updateHealth(x.health);
-          updateMetrics(x.metrics);
-          renderConfig(x.config);
-          renderApis(fromConfig(x.config));
-          $('errorBox').style.display = 'none';
-        } catch (e) {
-          $('errorBox').style.display = 'block';
-          $('errorBox').textContent = 'Unable to load dashboard telemetry: ' + e.message;
-        }
-      }
-      socket.on('connect', () => {
-        $('socketBadge').textContent = 'Dashboard Socket · Connected';
-        $('socketBadge').className = 'small-badge connected';
-        $('footer').textContent = 'Realtime telemetry active';
-        bootstrap();
-      });
-      socket.on('disconnect', () => {
-        $('socketBadge').textContent = 'Dashboard Socket · Disconnected';
-        $('socketBadge').className = 'small-badge disconnected';
-        $('footer').textContent = 'Socket disconnected · REST fallback available';
-      });
-      socket.on('initial-data', (x) => {
-        if (!x) return;
-        updateSystem(x.system);
-        updateBot(x.bot);
-        updateHealth(x.health);
-        updateMetrics(x.metrics);
-        renderConfig(x.config);
-        renderApis(fromConfig(x.config));
-      });
-      socket.on('system-update', updateSystem);
-      socket.on('bot-update', updateBot);
-      socket.on('health-update', updateHealth);
-      socket.on('metrics-update', updateMetrics);
-      setInterval(refreshApis, 15000);
-      setInterval(refreshNotifications, 10000);
-      bootstrap();
-      refreshApis();
-      refreshNotifications();
-    </script>
-  </body>
+  <div class="toast-stack" id="toastStack"></div>
+  <script src="./app.js" defer></script>
+</body>
 </html>

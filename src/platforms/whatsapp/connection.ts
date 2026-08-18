@@ -12,6 +12,7 @@ import qrcode from 'qrcode-terminal';
 import { config } from '../../config/config';
 import { logger, baileysLogger, logHelper } from '../../infrastructure/logging/logger';
 import { handleIncomingMessage } from './message-handler';
+
 import { TimeHelper } from '../../utils/helper';
 import { notificationService } from '@/infrastructure/notification/notification-service';
 import { setWhatsAppRuntime } from '@/web/dashboard/runtime-state';

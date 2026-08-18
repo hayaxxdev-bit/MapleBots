@@ -179,19 +179,6 @@ async function checkApiServices(): Promise<ServiceHealth[]> {
 export async function runHealthCheck(): Promise<HealthReport> {
   const services: ServiceHealth[] = [checkWhatsApp(), checkNotification(), checkNode()];
 
-  /**
-   * API providers are discovered dynamically
-   * from the API registry.
-   *
-   * This means adding:
-   *
-   *   jikan
-   *   waifu-im
-   *   trace-moe
-   *   ...
-   *
-   * automatically makes them appear here.
-   */
   const apiServices = await checkApiServices();
 
   services.push(...apiServices);
