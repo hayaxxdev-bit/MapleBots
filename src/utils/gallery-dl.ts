@@ -1,19 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 
-const projectRoot = path.resolve(__dirname, '../..');
+const projectRoot = process.cwd();
 
-const bundledGalleryDl = path.join(
-  projectRoot,
-  'runtime',
-  'gallery-dl',
-  'gallery-dl'
-);
+export const galleryDlPath = path.join(projectRoot, 'runtime', 'gallery-dl', 'gallery-dl');
 
-if (!fs.existsSync(bundledGalleryDl)) {
-  throw new Error(
-    `gallery-dl runtime tidak ditemukan: ${bundledGalleryDl}`
-  );
+export function isGalleryDlAvailable(): boolean {
+  return fs.existsSync(galleryDlPath);
 }
 
-export const galleryDlPath = bundledGalleryDl;
+if (!isGalleryDlAvailable()) {
+  throw new Error(`gallery-dl runtime tidak ditemukan: ${galleryDlPath}`);
+}

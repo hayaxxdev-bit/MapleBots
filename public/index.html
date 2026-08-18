@@ -1,175 +1,198 @@
 <!doctype html>
 <html lang="id">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0b0f14">
-  <meta name="description" content="MapleBot Operations Console">
-  <title>MapleBot · Ops Console</title>
-  <link rel="stylesheet" href="./styles.css">
-</head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="brand">
-        <div class="brand-mark">🍁</div>
-        <div>
-          <strong>MapleBot</strong>
-          <span>Ops Console</span>
-        </div>
-      </div>
-
-      <nav class="nav">
-        <a class="nav-item active" href="#overview" data-section="overview">
-          <span>⌂</span><span>Overview</span>
-        </a>
-        <a class="nav-item" href="#services" data-section="services">
-          <span>◉</span><span>Services</span>
-        </a>
-        <a class="nav-item" href="#apis" data-section="apis">
-          <span>⌘</span><span>API Providers</span>
-        </a>
-        <a class="nav-item" href="#runtime" data-section="runtime">
-          <span>▣</span><span>Runtime</span>
-        </a>
-        <a class="nav-item" href="#notifications" data-section="notifications">
-          <span>♢</span><span>Notifications</span>
-        </a>
-      </nav>
-
-      <div class="sidebar-bottom">
-        <div class="connection-pill" id="connectionPill">
-          <i></i>
-          <span id="connectionText">Connecting</span>
-        </div>
-        <button class="ghost-button" id="refreshButton" type="button">↻ Refresh</button>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <button class="icon-button mobile-only" id="menuButton" type="button" aria-label="Open menu">☰</button>
-        <div>
-          <div class="eyebrow">OPERATIONS / REALTIME TELEMETRY</div>
-          <h1>Dashboard</h1>
-        </div>
-        <div class="topbar-actions">
-          <div class="live-indicator"><i></i> LIVE</div>
-          <div class="last-update" id="lastUpdate">Waiting for telemetry…</div>
-        </div>
-      </header>
-
-      <section id="overview" class="page-section">
-        <div class="hero-grid">
-          <article class="hero-card">
-            <div class="hero-copy">
-              <span class="status-badge" id="overallBadge">CHECKING</span>
-              <h2 id="heroTitle">MapleBot Operations</h2>
-              <p id="heroMessage">Connecting to the application telemetry endpoint.</p>
-            </div>
-            <div class="hero-meta">
-              <div><span>ENVIRONMENT</span><strong id="envValue">—</strong></div>
-              <div><span>MODE</span><strong id="modeValue">—</strong></div>
-              <div><span>BOT</span><strong id="botValue">—</strong></div>
-            </div>
-          </article>
-
-          <article class="metric-card">
-            <div class="metric-label">CPU USAGE</div>
-            <div class="metric-value" id="cpuValue">—</div>
-            <div class="meter"><span id="cpuBar"></span></div>
-            <div class="metric-foot"><span>System load</span><strong id="loadValue">—</strong></div>
-          </article>
-
-          <article class="metric-card">
-            <div class="metric-label">MEMORY</div>
-            <div class="metric-value" id="memoryValue">—</div>
-            <div class="meter"><span id="memoryBar"></span></div>
-            <div class="metric-foot"><span>RSS</span><strong id="rssValue">—</strong></div>
-          </article>
-
-          <article class="metric-card">
-            <div class="metric-label">MESSAGES</div>
-            <div class="metric-value" id="messagesValue">0</div>
-            <div class="metric-foot"><span>Processed</span><strong id="commandsValue">0 cmds</strong></div>
-          </article>
-        </div>
-
-        <div class="section-heading">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0b0f14" />
+    <meta name="description" content="MapleBot Operations Console" />
+    <title>MapleBot · Ops Console</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <div class="brand-mark">🍁</div>
           <div>
-            <span class="eyebrow">HEALTH</span>
-            <h2>Service health</h2>
+            <strong>MapleBot</strong>
+            <span>Ops Console</span>
           </div>
-          <span class="muted" id="healthTimestamp">—</span>
         </div>
-        <div class="service-grid" id="serviceGrid"></div>
 
-        <div class="two-column">
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <span class="eyebrow">TELEMETRY</span>
-                <h2>CPU history</h2>
+        <nav class="nav">
+          <a class="nav-item active" href="#overview" data-section="overview">
+            <span>⌂</span><span>Overview</span>
+          </a>
+          <a class="nav-item" href="#services" data-section="services">
+            <span>◉</span><span>Services</span>
+          </a>
+          <a class="nav-item" href="#apis" data-section="apis">
+            <span>⌘</span><span>API Providers</span>
+          </a>
+          <a class="nav-item" href="#runtime" data-section="runtime">
+            <span>▣</span><span>Runtime</span>
+          </a>
+          <a class="nav-item" href="#notifications" data-section="notifications">
+            <span>♢</span><span>Notifications</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="connection-pill" id="connectionPill">
+            <i></i>
+            <span id="connectionText">Connecting</span>
+          </div>
+          <button class="ghost-button" id="refreshButton" type="button">↻ Refresh</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <button
+            class="icon-button mobile-only"
+            id="menuButton"
+            type="button"
+            aria-label="Open menu"
+          >
+            ☰
+          </button>
+          <div>
+            <div class="eyebrow">OPERATIONS / REALTIME TELEMETRY</div>
+            <h1>Dashboard</h1>
+          </div>
+          <div class="topbar-actions">
+            <div class="live-indicator"><i></i> LIVE</div>
+            <div class="last-update" id="lastUpdate">Waiting for telemetry…</div>
+          </div>
+        </header>
+
+        <section id="overview" class="page-section">
+          <div class="hero-grid">
+            <article class="hero-card">
+              <div class="hero-copy">
+                <span class="status-badge" id="overallBadge">CHECKING</span>
+                <h2 id="heroTitle">MapleBot Operations</h2>
+                <p id="heroMessage">Connecting to the application telemetry endpoint.</p>
               </div>
-              <span class="panel-value" id="cpuHistoryValue">—</span>
-            </div>
-            <canvas id="cpuChart" height="170"></canvas>
-          </article>
-
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <span class="eyebrow">TELEMETRY</span>
-                <h2>Memory history</h2>
+              <div class="hero-meta">
+                <div><span>ENVIRONMENT</span><strong id="envValue">—</strong></div>
+                <div><span>MODE</span><strong id="modeValue">—</strong></div>
+                <div><span>BOT</span><strong id="botValue">—</strong></div>
               </div>
-              <span class="panel-value" id="memoryHistoryValue">—</span>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-label">CPU USAGE</div>
+              <div class="metric-value" id="cpuValue">—</div>
+              <div class="meter"><span id="cpuBar"></span></div>
+              <div class="metric-foot">
+                <span>System load</span><strong id="loadValue">—</strong>
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-label">MEMORY</div>
+              <div class="metric-value" id="memoryValue">—</div>
+              <div class="meter"><span id="memoryBar"></span></div>
+              <div class="metric-foot"><span>RSS</span><strong id="rssValue">—</strong></div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-label">MESSAGES</div>
+              <div class="metric-value" id="messagesValue">0</div>
+              <div class="metric-foot">
+                <span>Processed</span><strong id="commandsValue">0 cmds</strong>
+              </div>
+            </article>
+          </div>
+
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">HEALTH</span>
+              <h2>Service health</h2>
             </div>
-            <canvas id="memoryChart" height="170"></canvas>
-          </article>
-        </div>
-      </section>
+            <span class="muted" id="healthTimestamp">—</span>
+          </div>
+          <div class="service-grid" id="serviceGrid"></div>
 
-      <section id="services" class="page-section">
-        <div class="section-heading">
-          <div><span class="eyebrow">RUNTIME</span><h2>Services</h2></div>
-        </div>
-        <div class="service-grid" id="servicesGrid"></div>
-      </section>
+          <div class="two-column">
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <span class="eyebrow">TELEMETRY</span>
+                  <h2>CPU history</h2>
+                </div>
+                <span class="panel-value" id="cpuHistoryValue">—</span>
+              </div>
+              <canvas id="cpuChart" height="170"></canvas>
+            </article>
 
-      <section id="apis" class="page-section">
-        <div class="section-heading">
-          <div><span class="eyebrow">INTEGRATIONS</span><h2>API Providers</h2></div>
-          <span class="muted" id="apiSummary">—</span>
-        </div>
-        <div class="api-grid" id="apiGrid"></div>
-      </section>
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <span class="eyebrow">TELEMETRY</span>
+                  <h2>Memory history</h2>
+                </div>
+                <span class="panel-value" id="memoryHistoryValue">—</span>
+              </div>
+              <canvas id="memoryChart" height="170"></canvas>
+            </article>
+          </div>
+        </section>
 
-      <section id="runtime" class="page-section">
-        <div class="section-heading">
-          <div><span class="eyebrow">PROCESS</span><h2>Runtime details</h2></div>
-        </div>
-        <div class="runtime-grid">
-          <article class="panel detail-panel" id="runtimePanel"></article>
-          <article class="panel detail-panel" id="configPanel"></article>
-        </div>
-      </section>
+        <section id="services" class="page-section">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">RUNTIME</span>
+              <h2>Services</h2>
+            </div>
+          </div>
+          <div class="service-grid" id="servicesGrid"></div>
+        </section>
 
-      <section id="notifications" class="page-section">
-        <div class="section-heading">
-          <div><span class="eyebrow">EVENTS</span><h2>Recent notifications</h2></div>
-          <span class="muted" id="notificationCount">0 events</span>
-        </div>
-        <div class="panel notification-list" id="notificationList"></div>
-      </section>
+        <section id="apis" class="page-section">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">INTEGRATIONS</span>
+              <h2>API Providers</h2>
+            </div>
+            <span class="muted" id="apiSummary">—</span>
+          </div>
+          <div class="api-grid" id="apiGrid"></div>
+        </section>
 
-      <footer>
-        <span>MapleBot Ops Console</span>
-        <span>Telemetry polling · <strong id="pollInterval">5s</strong></span>
-      </footer>
-    </main>
-  </div>
+        <section id="runtime" class="page-section">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">PROCESS</span>
+              <h2>Runtime details</h2>
+            </div>
+          </div>
+          <div class="runtime-grid">
+            <article class="panel detail-panel" id="runtimePanel"></article>
+            <article class="panel detail-panel" id="configPanel"></article>
+          </div>
+        </section>
 
-  <div class="toast-stack" id="toastStack"></div>
-  <script src="./app.js" defer></script>
-</body>
+        <section id="notifications" class="page-section">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">EVENTS</span>
+              <h2>Recent notifications</h2>
+            </div>
+            <span class="muted" id="notificationCount">0 events</span>
+          </div>
+          <div class="panel notification-list" id="notificationList"></div>
+        </section>
+
+        <footer>
+          <span>MapleBot Ops Console</span>
+          <span>Telemetry polling · <strong id="pollInterval">5s</strong></span>
+        </footer>
+      </main>
+    </div>
+
+    <div class="toast-stack" id="toastStack"></div>
+    <script src="./app.js" defer></script>
+  </body>
 </html>

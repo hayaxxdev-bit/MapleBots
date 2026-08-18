@@ -1,3 +1,4 @@
+import { ytDlpPath } from '../../utils/yt-dlp';
 import type { Command } from '../../types';
 import { config } from '../../config/config';
 import { logHelper } from '../../utils/logger';
@@ -158,7 +159,7 @@ async function downloadWithYtDlp(url: string): Promise<FacebookDownloadResult> {
 
     try {
       const { stdout } = await execFileAsync(
-        'yt-dlp',
+        ytDlpPath,
         [
           url,
           '-f',
@@ -198,7 +199,7 @@ async function downloadWithYtDlp(url: string): Promise<FacebookDownloadResult> {
       let author: string | undefined;
       let duration: string | undefined;
       try {
-        const { stdout: infoOut } = await execFileAsync('yt-dlp', [
+        const { stdout: infoOut } = await execFileAsync(ytDlpPath, [
           url,
           '--dump-json',
           '--no-warnings',

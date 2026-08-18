@@ -1,3 +1,4 @@
+import { ytDlpPath } from '../../utils/yt-dlp';
 // src/commands/downloader/youtube.ts
 import type { Command } from '../../types';
 import { config } from '../../config/config';
@@ -150,7 +151,7 @@ async function downloadVideoWithYtDlp(url: string): Promise<YouTubeDownloadResul
 
     try {
       const { stdout } = await execFileAsync(
-        'yt-dlp',
+        ytDlpPath,
         [
           url,
           '-f',
@@ -210,7 +211,7 @@ async function downloadAudioWithYtDlp(url: string): Promise<YouTubeDownloadResul
 
   try {
     const { stdout } = await execFileAsync(
-      'yt-dlp',
+      ytDlpPath,
       [
         url,
         '-f',
@@ -261,7 +262,7 @@ async function downloadAudioWithYtDlp(url: string): Promise<YouTubeDownloadResul
 
 async function getTitleSafe(url: string): Promise<string> {
   try {
-    const { stdout } = await execFileAsync('yt-dlp', [
+    const { stdout } = await execFileAsync(ytDlpPath, [
       url,
       '--print',
       'title',
@@ -336,7 +337,7 @@ async function downloadYouTubeAudio(url: string): Promise<YouTubeDownloadResult>
 async function getVideoInfo(url: string): Promise<YouTubeVideoInfo | null> {
   try {
     const { stdout } = await execFileAsync(
-      'yt-dlp',
+      ytDlpPath,
       [url, '--dump-json', '--no-warnings', '--no-playlist', '--no-cache-dir'],
       { timeout: REQUEST_TIMEOUT, maxBuffer: 10 * 1024 * 1024 }
     );

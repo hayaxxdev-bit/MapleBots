@@ -1,8 +1,4 @@
-import pino, {
-  type DestinationStream,
-  type Logger,
-  type LoggerOptions,
-} from 'pino';
+import pino, { type DestinationStream, type Logger, type LoggerOptions } from 'pino';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -19,41 +15,16 @@ interface TransportConfig {
 }
 
 type DownloadService =
-  | 'tiktok'
-  | 'youtube'
-  | 'instagram'
-  | 'facebook'
-  | 'twitter'
-  | 'pinterest'
-  | 'general';
+  'tiktok' | 'youtube' | 'instagram' | 'facebook' | 'twitter' | 'pinterest' | 'general';
 
-type DownloadStatus =
-  | 'START'
-  | 'SUCCESS'
-  | 'FAILED'
-  | 'RETRY';
+type DownloadStatus = 'START' | 'SUCCESS' | 'FAILED' | 'RETRY';
 
-type AnimeFeature =
-  | 'info'
-  | 'trace'
-  | 'wallpaper'
-  | 'search'
-  | 'download';
+type AnimeFeature = 'info' | 'trace' | 'wallpaper' | 'search' | 'download';
 
-type ChatType =
-  | 'private'
-  | 'group'
-  | 'broadcast'
-  | 'status';
+type ChatType = 'private' | 'group' | 'broadcast' | 'status';
 
 type ScraperType =
-  | 'tiktok'
-  | 'youtube'
-  | 'instagram'
-  | 'facebook'
-  | 'twitter'
-  | 'pinterest'
-  | 'general';
+  'tiktok' | 'youtube' | 'instagram' | 'facebook' | 'twitter' | 'pinterest' | 'general';
 
 interface CommandLogContext {
   readonly sender: string;
@@ -64,10 +35,7 @@ interface CommandLogContext {
 interface ScraperLogContext {
   readonly scraper: string;
   readonly operation: string;
-  readonly status:
-    | 'success'
-    | 'failed'
-    | 'timeout';
+  readonly status: 'success' | 'failed' | 'timeout';
   readonly duration?: number;
 }
 
@@ -186,9 +154,7 @@ function separator(char: string = '─', length: number = 60): string {
  * ============================================================ */
 
 function setupLogDirectory(): string {
-  const logDir = path.dirname(
-    path.resolve(config.logFileCombined),
-  );
+  const logDir = path.dirname(path.resolve(config.logFileCombined));
 
   try {
     if (!fs.existsSync(logDir)) {
@@ -197,15 +163,10 @@ function setupLogDirectory(): string {
         mode: 0o755,
       });
 
-      console.info(
-        `📁 Created log directory: ${logDir}`,
-      );
+      console.info(`📁 Created log directory: ${logDir}`);
     }
 
-    const testFile = path.join(
-      logDir,
-      '.write-test',
-    );
+    const testFile = path.join(logDir, '.write-test');
 
     fs.writeFileSync(testFile, 'test', {
       flag: 'w',
@@ -215,14 +176,9 @@ function setupLogDirectory(): string {
 
     return logDir;
   } catch (error) {
-    console.error(
-      'Failed to setup log directory:',
-      error,
-    );
+    console.error('Failed to setup log directory:', error);
 
-    throw new Error(
-      `Cannot access log directory: ${logDir}`,
-    );
+    throw new Error(`Cannot access log directory: ${logDir}`);
   }
 }
 
@@ -239,22 +195,15 @@ const PRETTY_COLORS = [
   'fatal:magenta',
 ].join(',');
 
-const PRETTY_LEVELS = [
-  'trace:10',
-  'debug:20',
-  'info:30',
-  'warn:40',
-  'error:50',
-  'fatal:60',
-].join(',');
+const PRETTY_LEVELS = ['trace:10', 'debug:20', 'info:30', 'warn:40', 'error:50', 'fatal:60'].join(
+  ','
+);
 
 /* ============================================================
  * TRANSPORTS
  * ============================================================ */
 
-function buildTransports(
-  _logDir: string,
-): TransportConfig[] {
+function buildTransports(_logDir: string): TransportConfig[] {
   const transports: TransportConfig[] = [
     {
       target: 'pino-pretty',
@@ -296,7 +245,7 @@ function buildTransports(
           destination: config.logFileError,
           mkdir: true,
         },
-      },
+      }
     );
   }
 
@@ -316,9 +265,7 @@ const loggerOptions: LoggerOptions = {
 
   base: {
     service: 'maple-bot',
-    env: config.isProduction
-      ? 'production'
-      : 'development',
+    env: config.isProduction ? 'production' : 'development',
   },
 
   /*
@@ -348,7 +295,7 @@ export const logger: Logger = pino(
   loggerOptions,
   pino.transport({
     targets: buildTransports(logDir),
-  }) as unknown as DestinationStream,
+  }) as unknown as DestinationStream
 );
 
 /*
@@ -364,22 +311,15 @@ baileysLogger.level = config.baileysLogLevel;
  * FORMAT HELPERS
  * ============================================================ */
 
-function cleanNumber(
-  value?: string,
-): string {
+function cleanNumber(value?: string): string {
   if (!value) {
     return '';
   }
 
-  return value.replace(
-    /[^0-9]/g,
-    '',
-  );
+  return value.replace(/[^0-9]/g, '');
 }
 
-function displayNumber(
-  value?: string,
-): string {
+function displayNumber(value?: string): string {
   const number = cleanNumber(value);
 
   if (!number) {
@@ -393,9 +333,7 @@ function displayNumber(
   return `+${number.slice(0, 4)}...${number.slice(-4)}`;
 }
 
-function displayName(
-  value?: string,
-): string {
+function displayName(value?: string): string {
   const name = value?.trim();
 
   if (!name) {
@@ -405,29 +343,17 @@ function displayName(
   return name;
 }
 
-function shorten(
-  value: string,
-  maxLength: number,
-): string {
-  const normalized = value
-    .replace(/\s+/g, ' ')
-    .trim();
+function shorten(value: string, maxLength: number): string {
+  const normalized = value.replace(/\s+/g, ' ').trim();
 
   if (normalized.length <= maxLength) {
     return normalized;
   }
 
-  return (
-    normalized.slice(
-      0,
-      maxLength - 3,
-    ) + '...'
-  );
+  return normalized.slice(0, maxLength - 3) + '...';
 }
 
-function formatDuration(
-  duration?: number,
-): string {
+function formatDuration(duration?: number): string {
   if (typeof duration !== 'number') {
     return '';
   }
@@ -435,32 +361,22 @@ function formatDuration(
   return ` | ${duration}ms`;
 }
 
-function formatStatus(
-  status: string,
-): string {
-  return status
-    .trim()
-    .toUpperCase();
+function formatStatus(status: string): string {
+  return status.trim().toUpperCase();
 }
 
 /* ============================================================
  * ICONS
  * ============================================================ */
 
-const DOWNLOAD_ICONS: Record<
-  DownloadStatus,
-  string
-> = {
+const DOWNLOAD_ICONS: Record<DownloadStatus, string> = {
   START: '⬇️',
   SUCCESS: '✅',
   FAILED: '❌',
   RETRY: '🔄',
 };
 
-const CONNECTION_ICONS: Record<
-  string,
-  string
-> = {
+const CONNECTION_ICONS: Record<string, string> = {
   OPEN: '🟢',
   CONNECTED: '🟢',
   ONLINE: '🟢',
@@ -498,7 +414,7 @@ export const logHelper = {
         args: [...args],
         type: 'command',
       },
-      message,
+      message
     );
   },
 
@@ -509,7 +425,7 @@ export const logHelper = {
     service: DownloadService,
     url: string,
     status: DownloadStatus,
-    extraInfo?: string,
+    extraInfo?: string
   ): void {
     const normalizedStatus = formatStatus(status) as DownloadStatus;
     const icon = DOWNLOAD_ICONS[normalizedStatus] ?? '📥';
@@ -539,7 +455,7 @@ export const logHelper = {
         status: normalizedStatus,
         type: 'downloader',
       },
-      message,
+      message
     );
   },
 
@@ -555,7 +471,7 @@ export const logHelper = {
         query,
         type: 'anime',
       },
-      message,
+      message
     );
   },
 
@@ -566,7 +482,8 @@ export const logHelper = {
     const { scraper, operation, status, duration } = context;
 
     const normalizedStatus = status.toUpperCase();
-    const icon = normalizedStatus === 'SUCCESS' ? '✅' : normalizedStatus === 'TIMEOUT' ? '⏱️' : '❌';
+    const icon =
+      normalizedStatus === 'SUCCESS' ? '✅' : normalizedStatus === 'TIMEOUT' ? '⏱️' : '❌';
 
     const message = `${icon} ${colorize(scraper.toUpperCase(), 'cyan')} ${dim('→')} ${operation} ${dim('→')} ${colorize(normalizedStatus, normalizedStatus === 'SUCCESS' ? 'brightGreen' : 'brightRed')}${formatDuration(duration)}`;
 
@@ -578,7 +495,7 @@ export const logHelper = {
         duration,
         type: 'scraper',
       },
-      message,
+      message
     );
   },
 
@@ -618,7 +535,7 @@ export const logHelper = {
           isCommand,
           type: 'incoming-group-message',
         },
-        message,
+        message
       );
 
       return;
@@ -637,7 +554,7 @@ export const logHelper = {
           isCommand,
           type: 'incoming-private-message',
         },
-        message,
+        message
       );
 
       return;
@@ -651,7 +568,7 @@ export const logHelper = {
         messageType,
         type: 'incoming-other-message',
       },
-      `📥 [${chatType.toUpperCase()}] ${messageType}: ${shortText}`,
+      `📥 [${chatType.toUpperCase()}] ${messageType}: ${shortText}`
     );
   },
 
@@ -678,19 +595,14 @@ export const logHelper = {
         actor: actorNumber,
         type: 'group-event',
       },
-      message,
+      message
     );
   },
 
   /**
    * Bot outgoing message.
    */
-  outgoingMessage(
-    chatId: string,
-    chatType: ChatType,
-    messageType: string,
-    content: string,
-  ): void {
+  outgoingMessage(chatId: string, chatType: ChatType, messageType: string, content: string): void {
     const shortContent = shorten(content, 100);
     const number = cleanNumber(chatId);
 
@@ -703,7 +615,7 @@ export const logHelper = {
         messageType,
         type: 'outgoing-message',
       },
-      message,
+      message
     );
   },
 
@@ -752,7 +664,7 @@ export const logHelper = {
         details,
         type: 'connection',
       },
-      message,
+      message
     );
   },
 
@@ -774,7 +686,7 @@ export const logHelper = {
           context,
           type: 'error',
         },
-        message,
+        message
       );
 
       return;
@@ -788,7 +700,7 @@ export const logHelper = {
         context,
         type: 'error',
       },
-      message,
+      message
     );
   },
 
@@ -803,7 +715,7 @@ export const logHelper = {
         context,
         type: 'warning',
       },
-      formattedMessage,
+      formattedMessage
     );
   },
 
@@ -818,7 +730,7 @@ export const logHelper = {
         context,
         type: 'info',
       },
-      formattedMessage,
+      formattedMessage
     );
   },
 
@@ -834,7 +746,7 @@ export const logHelper = {
         data,
         type: 'debug',
       },
-      formattedMessage,
+      formattedMessage
     );
   },
 
@@ -856,7 +768,7 @@ export const logHelper = {
           context,
           type: 'fatal',
         },
-        message,
+        message
       );
 
       return;
@@ -870,7 +782,7 @@ export const logHelper = {
         context,
         type: 'fatal',
       },
-      message,
+      message
     );
   },
 };

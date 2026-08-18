@@ -1,3 +1,4 @@
+import { ytDlpPath } from '../../utils/yt-dlp';
 // src/commands/downloader/twitter.ts
 import type { Command } from '../../types';
 import { config } from '../../config/config';
@@ -72,7 +73,7 @@ async function getMetaSafe(
   fallbackTitle: string
 ): Promise<{ title: string; author?: string }> {
   try {
-    const { stdout } = await execFileAsync('yt-dlp', [
+    const { stdout } = await execFileAsync(ytDlpPath, [
       url,
       '--dump-json',
       '--no-warnings',
@@ -104,7 +105,7 @@ async function downloadVideoWithYtDlp(url: string): Promise<TwitterDownloadResul
 
     try {
       const { stdout } = await execFileAsync(
-        'yt-dlp',
+        ytDlpPath,
         [
           url,
           '-f',
@@ -178,7 +179,7 @@ async function downloadImageWithYtDlp(url: string): Promise<TwitterDownloadResul
 
   try {
     await execFileAsync(
-      'yt-dlp',
+      ytDlpPath,
       [
         url,
         '--skip-download',

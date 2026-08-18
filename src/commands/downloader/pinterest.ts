@@ -11,6 +11,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { galleryDlPath } from '../../utils/gallery-dl';
 import type { WASocket, WAMessage } from '@whiskeysockets/baileys';
+import { ytDlpPath } from '@/utils/yt-dlp';
 
 const execFileAsync = promisify(execFile);
 
@@ -200,7 +201,7 @@ async function downloadVideoFromM3u8(m3u8Url: string): Promise<{ buffer: Buffer;
 
   try {
     const { stdout } = await execFileAsync(
-      'yt-dlp',
+      ytDlpPath,
       [
         m3u8Url,
         '-f',
